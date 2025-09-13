@@ -106,14 +106,14 @@ namespace VeldridRaylib
         {
             if (_window == null || _graphicsDevice == null || _renderer == null) return;
 
-            var inputSnapshot = _window.PumpEvents();
-            
-            // Update previous key states
+            // Update previous key states BEFORE processing new events
             _previousKeyStates.Clear();
             foreach (var kvp in _keyStates)
             {
                 _previousKeyStates[kvp.Key] = kvp.Value;
             }
+
+            var inputSnapshot = _window.PumpEvents();
 
             _renderer.BeginFrame();
         }
@@ -239,8 +239,9 @@ namespace VeldridRaylib
         public static bool IsKeyPressed(KeyCode key)
         {
             var veldridKey = (Veldrid.Key)(int)key;
-            return _keyStates.GetValueOrDefault(veldridKey, false) && 
-                   !_previousKeyStates.GetValueOrDefault(veldridKey, false);
+            bool currentState = _keyStates.GetValueOrDefault(veldridKey, false);
+            bool previousState = _previousKeyStates.GetValueOrDefault(veldridKey, false);
+            return currentState && !previousState;
         }
 
         public static bool IsKeyDown(KeyCode key)
