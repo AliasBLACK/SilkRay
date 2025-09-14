@@ -1,3 +1,5 @@
+global using static SilkRay.RaylibAPI;
+
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 using Silk.NET.Input;
@@ -5,17 +7,21 @@ using System;
 
 namespace SilkRay
 {
+    // Internal static fields for Raylib functionality
+    internal static class RaylibInternal
+    {
+        public static IWindow? Window;
+        public static GL? GL;
+        public static Renderer? Renderer;
+        public static IInputContext? Input;
+        public static bool ShouldClose;
+    }
+
     /// <summary>
     /// Core Raylib functions implementation using Silk.NET
     /// </summary>
-    public static class Raylib
+    public static class RaylibAPI
     {
-        private static IWindow? _window;
-        private static GL? _gl;
-        private static Renderer? _renderer;
-        private static IInputContext? _input;
-        private static bool _shouldClose;
-
         // Window-related functions (rcore)
         public static void InitWindow(int width, int height, string title)
         {
@@ -26,43 +32,43 @@ namespace SilkRay
             options.UpdatesPerSecond = 60;
             options.FramesPerSecond = 60;
 
-            _window = Window.Create(options);
+            RaylibInternal.Window = Window.Create(options);
             
-            _window.Load += OnLoad;
-            _window.Update += OnUpdate;
-            _window.Render += OnRender;
-            _window.Resize += OnResize;
-            _window.Closing += OnClosing;
+            RaylibInternal.Window.Load += OnLoad;
+            RaylibInternal.Window.Update += OnUpdate;
+            RaylibInternal.Window.Render += OnRender;
+            RaylibInternal.Window.Resize += OnResize;
+            RaylibInternal.Window.Closing += OnClosing;
             
             // Initialize the window immediately for traditional loop usage
-            _window.Initialize();
+            RaylibInternal.Window.Initialize();
             
-            if (_window.IsInitialized)
+            if (RaylibInternal.Window.IsInitialized)
             {
                 OnLoad();
             }
         }
 
-        public static bool WindowShouldClose()
+    public static bool WindowShouldClose()
+    {
+        if (RaylibInternal.Window == null || !RaylibInternal.Window.IsInitialized) return true;
+        
+        // Process window events to keep window responsive
+        try
         {
-            if (_window == null || !_window.IsInitialized) return true;
-            
-            // Process window events to keep window responsive
-            try
-            {
-                _window.DoEvents();
-                return _shouldClose || _window.IsClosing;
-            }
-            catch
-            {
-                return true;
-            }
+            RaylibInternal.Window.DoEvents();
+            return RaylibInternal.ShouldClose || RaylibInternal.Window.IsClosing;
+        }
+        catch
+        {
+            return true;
+        }
         }
 
         public static void CloseWindow()
         {
-            _shouldClose = true;
-            _window?.Close();
+            RaylibInternal.ShouldClose = true;
+            RaylibInternal.Window?.Close();
         }
 
         public static void SetTargetFPS(int fps)
@@ -73,50 +79,50 @@ namespace SilkRay
 
         public static int GetScreenWidth()
         {
-            return _window?.Size.X ?? 0;
+            return RaylibInternal.Window?.Size.X ?? 0;
         }
 
         public static int GetScreenHeight()
         {
-            return _window?.Size.Y ?? 0;
+            return RaylibInternal.Window?.Size.Y ?? 0;
         }
 
         public static void SetWindowTitle(string title)
         {
-            if (_window != null)
-                _window.Title = title;
+            if (RaylibInternal.Window != null)
+                RaylibInternal.Window.Title = title;
         }
 
         // Window state functions
         public static bool IsWindowReady()
         {
-            return _window != null && _window.IsInitialized;
+            return RaylibInternal.Window != null && RaylibInternal.Window.IsInitialized;
         }
 
         public static bool IsWindowFullscreen()
         {
-            return _window?.WindowState == WindowState.Fullscreen;
+            return RaylibInternal.Window?.WindowState == WindowState.Fullscreen;
         }
 
         public static bool IsWindowHidden()
         {
-            return _window?.IsVisible == false;
+            return RaylibInternal.Window?.IsVisible == false;
         }
 
         public static bool IsWindowMinimized()
         {
-            return _window?.WindowState == WindowState.Minimized;
+            return RaylibInternal.Window?.WindowState == WindowState.Minimized;
         }
 
         public static bool IsWindowMaximized()
         {
-            return _window?.WindowState == WindowState.Maximized;
+            return RaylibInternal.Window?.WindowState == WindowState.Maximized;
         }
 
         public static bool IsWindowFocused()
         {
             // Silk.NET doesn't have a direct focus property, assume focused if not minimized
-            return _window?.WindowState != WindowState.Minimized;
+            return RaylibInternal.Window?.WindowState != WindowState.Minimized;
         }
 
         public static bool IsWindowResized()
@@ -143,9 +149,9 @@ namespace SilkRay
 
         public static void ToggleFullscreen()
         {
-            if (_window != null)
+            if (RaylibInternal.Window != null)
             {
-                _window.WindowState = _window.WindowState == WindowState.Fullscreen 
+                RaylibInternal.Window.WindowState = RaylibInternal.Window.WindowState == WindowState.Fullscreen 
                     ? WindowState.Normal 
                     : WindowState.Fullscreen;
             }
@@ -153,20 +159,20 @@ namespace SilkRay
 
         public static void MaximizeWindow()
         {
-            if (_window != null)
-                _window.WindowState = WindowState.Maximized;
+            if (RaylibInternal.Window != null)
+                RaylibInternal.Window.WindowState = WindowState.Maximized;
         }
 
         public static void MinimizeWindow()
         {
-            if (_window != null)
-                _window.WindowState = WindowState.Minimized;
+            if (RaylibInternal.Window != null)
+                RaylibInternal.Window.WindowState = WindowState.Minimized;
         }
 
         public static void RestoreWindow()
         {
-            if (_window != null)
-                _window.WindowState = WindowState.Normal;
+            if (RaylibInternal.Window != null)
+                RaylibInternal.Window.WindowState = WindowState.Normal;
         }
 
         public static void SetWindowIcon(Image image)
@@ -178,9 +184,9 @@ namespace SilkRay
         // Window size and position functions
         public static void SetWindowSize(int width, int height)
         {
-            if (_window != null)
+            if (RaylibInternal.Window != null)
             {
-                _window.Size = new Silk.NET.Maths.Vector2D<int>(width, height);
+                RaylibInternal.Window.Size = new Silk.NET.Maths.Vector2D<int>(width, height);
             }
         }
 
@@ -191,17 +197,17 @@ namespace SilkRay
 
         public static void SetWindowPosition(int x, int y)
         {
-            if (_window != null)
+            if (RaylibInternal.Window != null)
             {
-                _window.Position = new Silk.NET.Maths.Vector2D<int>(x, y);
+                RaylibInternal.Window.Position = new Silk.NET.Maths.Vector2D<int>(x, y);
             }
         }
 
         public static Vector2 GetWindowPosition()
         {
-            if (_window != null)
+            if (RaylibInternal.Window != null)
             {
-                var pos = _window.Position;
+                var pos = RaylibInternal.Window.Position;
                 return new Vector2(pos.X, pos.Y);
             }
             return Vector2.Zero;
@@ -311,7 +317,7 @@ namespace SilkRay
         // Cursor functions
         public static void ShowCursor()
         {
-            if (_window != null)
+            if (RaylibInternal.Window != null)
             {
                 // Silk.NET cursor visibility - may need input context
             }
@@ -319,7 +325,7 @@ namespace SilkRay
 
         public static void HideCursor()
         {
-            if (_window != null)
+            if (RaylibInternal.Window != null)
             {
                 // Silk.NET cursor visibility - may need input context
             }
@@ -350,20 +356,20 @@ namespace SilkRay
         // Drawing-related functions (rcore)
         public static void BeginDrawing()
         {
-            _renderer?.BeginDrawing();
+            RaylibInternal.Renderer?.BeginDrawing();
         }
 
         public static void EndDrawing()
         {
-            _renderer?.EndDrawing();
+            RaylibInternal.Renderer?.EndDrawing();
             
             // Present the frame by swapping buffers
-            _window?.SwapBuffers();
+            RaylibInternal.Window?.SwapBuffers();
         }
 
         public static void ClearBackground(Color color)
         {
-            _renderer?.ClearBackground(color);
+            RaylibInternal.Renderer?.ClearBackground(color);
         }
 
         // Shape drawing functions (rshapes)
@@ -379,7 +385,7 @@ namespace SilkRay
 
         public static void DrawLine(int startPosX, int startPosY, int endPosX, int endPosY, Color color)
         {
-            _renderer?.DrawLine(startPosX, startPosY, endPosX, endPosY, color);
+            RaylibInternal.Renderer?.DrawLine(startPosX, startPosY, endPosX, endPosY, color);
         }
 
         public static void DrawLineV(Vector2 startPos, Vector2 endPos, Color color)
@@ -397,12 +403,12 @@ namespace SilkRay
             }
 
             // Use the renderer's thick line drawing capability
-            _renderer?.DrawThickLine(startPos.X, startPos.Y, endPos.X, endPos.Y, thick, color);
+            RaylibInternal.Renderer?.DrawThickLine(startPos.X, startPos.Y, endPos.X, endPos.Y, thick, color);
         }
 
         public static void DrawCircle(int centerX, int centerY, float radius, Color color)
         {
-            _renderer?.DrawCircle(centerX, centerY, radius, color);
+            RaylibInternal.Renderer?.DrawCircle(centerX, centerY, radius, color);
         }
 
         public static void DrawCircleV(Vector2 center, float radius, Color color)
@@ -412,7 +418,7 @@ namespace SilkRay
 
         public static void DrawCircleLines(int centerX, int centerY, float radius, Color color)
         {
-            _renderer?.DrawCircleLines(centerX, centerY, radius, color, false);
+            RaylibInternal.Renderer?.DrawCircleLines(centerX, centerY, radius, color, false);
         }
 
         public static void DrawCircleLinesV(Vector2 center, float radius, Color color)
@@ -422,7 +428,7 @@ namespace SilkRay
 
         public static void DrawRectangle(int posX, int posY, int width, int height, Color color)
         {
-            _renderer?.DrawRectangle(posX, posY, width, height, color);
+            RaylibInternal.Renderer?.DrawRectangle(posX, posY, width, height, color);
         }
 
         public static void DrawRectangleV(Vector2 position, Vector2 size, Color color)
@@ -488,11 +494,11 @@ namespace SilkRay
         // Event handlers
         private static void OnLoad()
         {
-            if (_window == null) return;
+            if (RaylibInternal.Window == null) return;
 
-            _gl = _window.CreateOpenGL();
-            _renderer = new Renderer(_gl, _window.Size.X, _window.Size.Y);
-            _input = _window.CreateInput();
+            RaylibInternal.GL = RaylibInternal.Window.CreateOpenGL();
+            RaylibInternal.Renderer = new Renderer(RaylibInternal.GL, RaylibInternal.Window.Size.X, RaylibInternal.Window.Size.Y);
+            RaylibInternal.Input = RaylibInternal.Window.CreateInput();
         }
 
         private static void OnUpdate(double deltaTime)
@@ -507,13 +513,13 @@ namespace SilkRay
 
         private static void OnResize(Silk.NET.Maths.Vector2D<int> size)
         {
-            _renderer?.Resize(size.X, size.Y);
+            RaylibInternal.Renderer?.Resize(size.X, size.Y);
         }
 
         private static void OnClosing()
         {
-            _renderer?.Dispose();
-            _gl?.Dispose();
+            RaylibInternal.Renderer?.Dispose();
+            RaylibInternal.GL?.Dispose();
         }
 
         // Input functions (basic)
