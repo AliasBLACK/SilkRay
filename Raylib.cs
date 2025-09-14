@@ -6,6 +6,7 @@ using Silk.NET.GLFW;
 using Silk.NET.Input;
 using TextCopy;
 using StbImageSharp;
+using FontStashSharp;
 
 namespace SilkRay
 {
@@ -19,6 +20,15 @@ namespace SilkRay
         public static bool ShouldClose;
         public static ConfigFlags CurrentConfigFlags;
         public static bool GlfwInitialized = false;
+        
+        // Font system
+        public static FontSystem? FontSystem = null;
+        public static DynamicSpriteFont? DefaultFont = null;
+        public static Dictionary<string, DynamicSpriteFont> LoadedFonts = new();
+        public static Dictionary<string, FontSystem> LoadedFontSystems = new();
+        
+        // Default bitmap font
+        public static uint DefaultFontTexture = 0;
     }
 
     /// <summary>
@@ -1106,6 +1116,9 @@ namespace SilkRay
             RaylibInternal.GL = RaylibInternal.Window.CreateOpenGL();
             RaylibInternal.Renderer = new Renderer(RaylibInternal.GL, RaylibInternal.Window.Size.X, RaylibInternal.Window.Size.Y);
             RaylibInternal.Input = RaylibInternal.Window.CreateInput();
+            
+            // Initialize font system
+            InitializeFontSystem();
         }
 
         private static void OnUpdate(double deltaTime)
@@ -1563,15 +1576,175 @@ namespace SilkRay
             }
         }
 
-        // Text rendering functions (placeholder)
+        // Font system initialization
+        private static void InitializeFontSystem()
+        {
+            try
+            {
+                if (RaylibInternal.GL == null)
+                {
+                    Console.WriteLine("Warning: Cannot initialize font system - OpenGL context not available");
+                    return;
+                }
+
+                // Create FontSystem with OpenGL texture renderer
+                var fontSystemSettings = new FontSystemSettings
+                {
+                    TextureWidth = 1024,
+                    TextureHeight = 1024,
+                    KernelWidth = 2,
+                    KernelHeight = 2,
+                    FontResolutionFactor = 1
+                };
+
+                // Initialize FontStashSharp system
+                RaylibInternal.FontSystem = new FontSystem(fontSystemSettings);
+                
+                // Create default bitmap font texture
+                RaylibInternal.DefaultFontTexture = DefaultFont.CreateDefaultFontTexture(RaylibInternal.GL);
+                Console.WriteLine("Default font loaded successfully");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing font system: {ex.Message}");
+            }
+        }
+
+
+        // Font loading functions
+        public static Font LoadFont(string fileName)
+        {
+            try
+            {
+                if (RaylibInternal.FontSystem == null)
+                {
+                    Console.WriteLine("Warning: Font system not initialized");
+                    return new Font();
+                }
+
+                if (!File.Exists(fileName))
+                {
+                    Console.WriteLine($"Warning: Font file not found: {fileName}");
+                    return new Font();
+                }
+
+                // Create a new FontSystem specifically for this font
+                var fontSystem = new FontSystem();
+                byte[] fontData = File.ReadAllBytes(fileName);
+                fontSystem.AddFont(fontData);
+                
+                // Get a default size font from this specific font system
+                var spriteFont = fontSystem.GetFont(18);
+                
+                // Store both the font and its system for later use
+                RaylibInternal.LoadedFonts[fileName] = spriteFont;
+                RaylibInternal.LoadedFontSystems[fileName] = fontSystem;
+                
+                return new Font(fileName, spriteFont, 18);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading font '{fileName}': {ex.Message}");
+                return new Font();
+            }
+        }
+
+        public static void UnloadFont(Font font)
+        {
+            if (!string.IsNullOrEmpty(font.FileName))
+            {
+                RaylibInternal.LoadedFonts.Remove(font.FileName);
+                RaylibInternal.LoadedFontSystems.Remove(font.FileName);
+            }
+        }
+
+        // Text rendering functions using bitmap font as fallback
         public static void DrawText(string text, int posX, int posY, int fontSize, Color color)
         {
-            // Text rendering placeholder - would need font loading and text mesh generation
-            // This maintains API compatibility with Raylib
+            if (RaylibInternal.Renderer == null) return;
+            
+            // Use bitmap font for default text rendering
+            RaylibInternal.Renderer.DrawBitmapText(text, new Vector2(posX, posY), color, fontSize);
+        }
+
+        public static void DrawTextEx(Font font, string text, Vector2 position, float fontSize, float spacing, Color color)
+        {
+            if (string.IsNullOrEmpty(text) || RaylibInternal.Renderer == null)
+                return;
+
+            try
+            {
+                DynamicSpriteFont? spriteFont = null;
+                
+                // If a specific font is provided and it's valid, use the stored font
+                if (font.IsValid && !string.IsNullOrEmpty(font.FileName))
+                {
+                    // Try to get the loaded font system from our cache
+                    if (RaylibInternal.LoadedFontSystems.TryGetValue(font.FileName, out var fontSystem))
+                    {
+                        // Get the font at the requested size from the loaded font's system
+                        spriteFont = fontSystem.GetFont((int)fontSize);
+                    }
+                    else if (font.SpriteFont != null)
+                    {
+                        // Use the font's own SpriteFont if available
+                        spriteFont = font.SpriteFont;
+                    }
+                }
+                
+                // Fallback to default font if no specific font or font loading failed
+                if (spriteFont == null && RaylibInternal.FontSystem != null)
+                {
+                    spriteFont = RaylibInternal.DefaultFont ?? RaylibInternal.FontSystem.GetFont((int)fontSize);
+                }
+                
+                if (spriteFont == null)
+                {
+                    Console.WriteLine("Warning: No font available for text rendering");
+                    return;
+                }
+
+                // Create a simple text renderer that works with our existing system
+                RaylibInternal.Renderer.DrawText(spriteFont, text, position, color, fontSize, spacing);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error rendering text: {ex.Message}");
+            }
+        }
+
+        // Text measurement functions
+        public static int MeasureText(string text, int fontSize)
+        {
+            var font = RaylibInternal.DefaultFont != null 
+                ? new Font("", RaylibInternal.DefaultFont, fontSize) 
+                : new Font();
+            return (int)MeasureTextEx(font, text, fontSize, 1.0f).X;
+        }
+
+        public static Vector2 MeasureTextEx(Font font, string text, float fontSize, float spacing)
+        {
+            if (string.IsNullOrEmpty(text) || RaylibInternal.FontSystem == null)
+                return Vector2.Zero;
+
+            try
+            {
+                var spriteFont = font.SpriteFont ?? RaylibInternal.DefaultFont ?? RaylibInternal.FontSystem.GetFont((int)fontSize);
+                if (spriteFont == null)
+                    return Vector2.Zero;
+
+                // Use FontStashSharp's built-in measurement
+                var size = spriteFont.MeasureString(text);
+                return new Vector2(size.X, size.Y);
+            }
+            catch
+            {
+                return Vector2.Zero;
+            }
         }
     }
 
-    // Texture filtering enums
+    // Texture filtering modes
     public enum TextureFilter
     {
         Point = 0,              // No filter, just pixel approximation
@@ -1643,6 +1816,30 @@ namespace SilkRay
         public int right = right;           // Right border offset
         public int bottom = bottom;         // Bottom border offset
         public int layout = layout;         // Layout of the n-patch: 3x3, 1x3 or 3x1
+    }
+
+    public struct Font
+    {
+        public string FileName;             // Font file name
+        public DynamicSpriteFont? SpriteFont; // FontStashSharp sprite font
+        public int BaseSize;                // Base font size
+        public bool IsValid;                // Whether the font is valid
+
+        public Font()
+        {
+            FileName = string.Empty;
+            SpriteFont = null;
+            BaseSize = 18;
+            IsValid = false;
+        }
+
+        public Font(string fileName, DynamicSpriteFont spriteFont, int baseSize = 18)
+        {
+            FileName = fileName;
+            SpriteFont = spriteFont;
+            BaseSize = baseSize;
+            IsValid = spriteFont != null;
+        }
     }
 
     // Enums for input (simplified)

@@ -1,6 +1,5 @@
 using Silk.NET.OpenGL;
-using System;
-using System.Numerics;
+using FontStashSharp;
 
 namespace SilkRay
 {
@@ -18,6 +17,7 @@ namespace SilkRay
         private uint _textureVbo;
         private Vector2 _screenSize;
         private bool _disposed;
+        private FontRenderer? _fontRenderer;
 
         public Renderer(GL gl, int width, int height)
         {
@@ -85,23 +85,26 @@ namespace SilkRay
                 
                 // Set up vertex attribute pointer
                 _gl.EnableVertexAttribArray(0);
-                _gl.VertexAttribPointer(0, 2, GLEnum.Float, false, 2 * sizeof(float), (void*)0);
+                _gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2 * sizeof(float), (void*)0);
                 
                 // Set up texture vertex array and buffer objects
-                _textureVao = _gl.GenVertexArray();
-                _textureVbo = _gl.GenBuffer();
+                _gl.GenVertexArrays(1, out _textureVao);
+                _gl.GenBuffers(1, out _textureVbo);
                 
                 _gl.BindVertexArray(_textureVao);
                 _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _textureVbo);
                 
-                // Set up vertex attribute pointers for texture rendering (position + texcoord)
+                // Position (2 floats) + TexCoord (2 floats) = 4 floats per vertex
+                _gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), (void*)0);
                 _gl.EnableVertexAttribArray(0);
-                _gl.VertexAttribPointer(0, 2, GLEnum.Float, false, 4 * sizeof(float), (void*)0);
+                _gl.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), (void*)(2 * sizeof(float)));
                 _gl.EnableVertexAttribArray(1);
-                _gl.VertexAttribPointer(1, 2, GLEnum.Float, false, 4 * sizeof(float), (void*)(2 * sizeof(float)));
                 
-                // Unbind
                 _gl.BindVertexArray(0);
+
+                // Initialize font renderer
+                _fontRenderer = new FontRenderer(_gl, this);
+                
                 _gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
                 
                 // Enable blending for transparency
@@ -343,6 +346,57 @@ namespace SilkRay
             _gl.BindTexture(TextureTarget.Texture2D, 0);
         }
 
+        // Bitmap font text rendering using default Raylib font
+        public void DrawBitmapText(string text, Vector2 position, Color color, float fontSize)
+        {
+            if (string.IsNullOrEmpty(text) || RaylibInternal.DefaultFontTexture == 0)
+                return;
+
+            var (_, charHeight) = DefaultFont.GetCharSize();
+            float scale = fontSize / charHeight;
+            
+            float currentX = position.X;
+            float currentY = position.Y;
+            
+            var fontTexture = new Texture2D(RaylibInternal.DefaultFontTexture, 128, 128);
+            
+            foreach (char c in text)
+            {
+                if (c == '\n')
+                {
+                    currentX = position.X;
+                    currentY += charHeight * scale;
+                    continue;
+                }
+                
+                int actualCharWidth = DefaultFont.GetCharWidth(c);
+                var (u1, v1, u2, v2) = DefaultFont.GetCharTextureCoords(c);
+                
+                var sourceRect = new Rectangle(u1 * 128, v1 * 128, (u2 - u1) * 128, (v2 - v1) * 128);
+                var destRect = new Rectangle(currentX, currentY, actualCharWidth * scale, charHeight * scale);
+                
+                DrawTexturePro(fontTexture, sourceRect, destRect, Vector2.Zero, 0.0f, color);
+                
+                currentX += actualCharWidth * scale + 1;
+            }
+        }
+
+        // Text rendering with FontStashSharp
+        public void DrawText(DynamicSpriteFont spriteFont, string text, Vector2 position, Color color, float fontSize, float spacing)
+        {
+            if (_disposed || spriteFont == null || string.IsNullOrEmpty(text) || _fontRenderer == null)
+                return;
+
+            try
+            {
+                _fontRenderer.DrawText(spriteFont, text, position, color);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in DrawText: {ex.Message}");
+            }
+        }
+
         public void Resize(int width, int height)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
@@ -361,6 +415,7 @@ namespace SilkRay
                 _gl.DeleteBuffer(_textureVbo);
                 _shader?.Dispose();
                 _textureShader?.Dispose();
+                _fontRenderer?.Dispose();
                 _disposed = true;
             }
             GC.SuppressFinalize(this);
