@@ -63,8 +63,7 @@ namespace SilkRay
 
 		public void Use()
 		{
-			if (_disposed)
-				throw new ObjectDisposedException(nameof(Shader));
+			ObjectDisposedException.ThrowIf(_disposed, this);
 			
 			_gl.UseProgram(_program);
 		}
