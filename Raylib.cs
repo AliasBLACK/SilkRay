@@ -1,6 +1,8 @@
 global using static SilkRay.RaylibAPI;
 global using static SilkRay.RaylibShapes;
-global using static SilkRay.Keys;
+global using static SilkRay.KeyboardKeys;
+global using static SilkRay.MouseButton;
+global using static SilkRay.MouseCursor;
 
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -37,7 +39,7 @@ namespace SilkRay
         public static Dictionary<int, bool> PreviousKeyState = new();
         public static Queue<int> KeyPressedQueue = new();
         public static Queue<int> CharPressedQueue = new();
-        public static int ExitKey = Keys.KEY_ESCAPE;
+        public static int ExitKey = KEY_ESCAPE;
     }
 
     /// <summary>
@@ -1261,7 +1263,7 @@ namespace SilkRay
             return new Vector2(mouse.Position.X, mouse.Position.Y);
         }
 
-        public static bool IsMouseButtonPressed(MouseButton button)
+        public static bool IsMouseButtonPressed(int button)
         {
             if (RaylibInternal.Input == null) return false;
             
@@ -1270,13 +1272,7 @@ namespace SilkRay
             
             var mouse = mice[0];
             
-            return button switch
-            {
-                MouseButton.Left => mouse.IsButtonPressed(Silk.NET.Input.MouseButton.Left),
-                MouseButton.Right => mouse.IsButtonPressed(Silk.NET.Input.MouseButton.Right),
-                MouseButton.Middle => mouse.IsButtonPressed(Silk.NET.Input.MouseButton.Middle),
-                _ => false
-            };
+            return mouse.IsButtonPressed((Silk.NET.Input.MouseButton)button);
         }
 
         // Texture functions
@@ -1912,11 +1908,30 @@ namespace SilkRay
         }
     }
 
-    public enum MouseButton
+    public static class MouseButton
     {
-        Left = 0,
-        Right = 1,
-        Middle = 2
+        public const int MOUSE_BUTTON_LEFT = 0;       // public const int MOUSE button left
+        public const int MOUSE_BUTTON_RIGHT = 1;       // public const int MOUSE button right
+        public const int MOUSE_BUTTON_MIDDLE = 2;       // public const int MOUSE button public const int iddle (pressed wheel)
+        public const int MOUSE_BUTTON_SIDE = 3;       // public const int MOUSE button side (advanced public const int MOUSE device)
+        public const int MOUSE_BUTTON_EXTRA = 4;       // public const int MOUSE button extra (advanced public const int MOUSE device)
+        public const int MOUSE_BUTTON_FORWARD = 5;       // public const int MOUSE button forward (advanced public const int MOUSE device)
+        public const int MOUSE_BUTTON_BACK = 6;       // public const int MOUSE button back (advanced public const int MOUSE device)
+    }
+
+    public static class MouseCursor
+    {
+        public const int MOUSE_CURSOR_DEFAULT = 0;     // Default pointer shape
+        public const int MOUSE_CURSOR_ARROW = 1;     // Arrow shape
+        public const int MOUSE_CURSOR_IBEAM = 2;     // Text writing cursor shape
+        public const int MOUSE_CURSOR_CROSSHAIR = 3;     // Cross shape
+        public const int MOUSE_CURSOR_POINTING_HAND = 4;     // Pointing hand cursor
+        public const int MOUSE_CURSOR_RESIZE_EW = 5;     // Horizontal resize/move arrow shape
+        public const int MOUSE_CURSOR_RESIZE_NS = 6;     // Vertical resize/move arrow shape
+        public const int MOUSE_CURSOR_RESIZE_NWSE = 7;     // Top-left to bottom-right diagonal resize/move arrow shape
+        public const int MOUSE_CURSOR_RESIZE_NESW = 8;     // The top-right to bottom-left diagonal resize/move arrow shape
+        public const int MOUSE_CURSOR_RESIZE_ALL = 9;     // The omnidirectional resize/move cursor shape
+        public const int MOUSE_CURSOR_NOT_ALLOWED = 10;     // The operation-not-allowed shape
     }
 
     // Window configuration flags - Complete Raylib ConfigFlags implementation
@@ -1991,7 +2006,7 @@ namespace SilkRay
     }
 
     // Global keyboard key constants (Raylib style)
-    public static class Keys
+    public static class KeyboardKeys
 	{
 		// Alphanumeric keys
 		public const int KEY_SPACE = 32;
