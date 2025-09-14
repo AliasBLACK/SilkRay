@@ -1,6 +1,7 @@
 global using static SilkRay.RaylibAPI;
 global using static SilkRay.RaylibShapes;
 global using static SilkRay.KeyboardKeys;
+global using static SilkRay.WindowFlags;
 global using static SilkRay.MouseButton;
 global using static SilkRay.MouseCursor;
 
@@ -265,24 +266,22 @@ namespace SilkRay
 		{
 			if (RaylibInternal.Window == null) return false;
 			
-			var windowStateFlag = (WindowStateFlags)flag;
-			
-			if (windowStateFlag.HasFlag(WindowStateFlags.FullscreenMode))
+			if ((flag & FLAG_FULLSCREEN_MODE) != 0)
 				return RaylibInternal.Window.WindowState == WindowState.Fullscreen;
 			
-			if (windowStateFlag.HasFlag(WindowStateFlags.WindowMaximized))
+			if ((flag & FLAG_WINDOW_MAXIMIZED) != 0)
 				return RaylibInternal.Window.WindowState == WindowState.Maximized;
 			
-			if (windowStateFlag.HasFlag(WindowStateFlags.WindowMinimized))
+			if ((flag & FLAG_WINDOW_MINIMIZED) != 0)
 				return RaylibInternal.Window.WindowState == WindowState.Minimized;
 			
-			if (windowStateFlag.HasFlag(WindowStateFlags.WindowHidden))
+			if ((flag & FLAG_WINDOW_HIDDEN) != 0)
 				return !RaylibInternal.Window.IsVisible;
 			
-			if (windowStateFlag.HasFlag(WindowStateFlags.WindowResizable))
+			if ((flag & FLAG_WINDOW_RESIZABLE) != 0)
 				return RaylibInternal.Window.WindowBorder == WindowBorder.Resizable;
 			
-			if (windowStateFlag.HasFlag(WindowStateFlags.WindowUndecorated))
+			if ((flag & FLAG_WINDOW_UNDECORATED) != 0)
 				return RaylibInternal.Window.WindowBorder == WindowBorder.Hidden;
 			
 			return false;
@@ -292,22 +291,20 @@ namespace SilkRay
 		{
 			if (RaylibInternal.Window == null) return;
 			
-			var windowStateFlags = (WindowStateFlags)flags;
-			
-			if (windowStateFlags.HasFlag(WindowStateFlags.FullscreenMode))
+			if ((flags & FLAG_FULLSCREEN_MODE) != 0)
 				RaylibInternal.Window.WindowState = WindowState.Fullscreen;
-			else if (windowStateFlags.HasFlag(WindowStateFlags.WindowMaximized))
+			else if ((flags & FLAG_WINDOW_MAXIMIZED) != 0)
 				RaylibInternal.Window.WindowState = WindowState.Maximized;
-			else if (windowStateFlags.HasFlag(WindowStateFlags.WindowMinimized))
+			else if ((flags & FLAG_WINDOW_MINIMIZED) != 0)
 				RaylibInternal.Window.WindowState = WindowState.Minimized;
 			else
 				RaylibInternal.Window.WindowState = WindowState.Normal;
 			
-			if (windowStateFlags.HasFlag(WindowStateFlags.WindowHidden))
+			if ((flags & FLAG_WINDOW_HIDDEN) != 0)
 				RaylibInternal.Window.IsVisible = false;
-			else if (windowStateFlags.HasFlag(WindowStateFlags.WindowResizable))
+			else if ((flags & FLAG_WINDOW_RESIZABLE) != 0)
 				RaylibInternal.Window.WindowBorder = WindowBorder.Resizable;
-			else if (windowStateFlags.HasFlag(WindowStateFlags.WindowUndecorated))
+			else if ((flags & FLAG_WINDOW_UNDECORATED) != 0)
 				RaylibInternal.Window.WindowBorder = WindowBorder.Hidden;
 		}
 
@@ -315,56 +312,31 @@ namespace SilkRay
 		{
 			if (RaylibInternal.Window == null) return;
 			
-			var windowStateFlags = (WindowStateFlags)flags;
-			
-			if (windowStateFlags.HasFlag(WindowStateFlags.FullscreenMode))
+			if ((flags & FLAG_FULLSCREEN_MODE) != 0)
 			{
 				if (RaylibInternal.Window.WindowState == WindowState.Fullscreen)
 					RaylibInternal.Window.WindowState = WindowState.Normal;
 			}
 			
-			if (windowStateFlags.HasFlag(WindowStateFlags.WindowMaximized))
+			if ((flags & FLAG_WINDOW_MAXIMIZED) != 0)
 			{
 				if (RaylibInternal.Window.WindowState == WindowState.Maximized)
 					RaylibInternal.Window.WindowState = WindowState.Normal;
 			}
 			
-			if (windowStateFlags.HasFlag(WindowStateFlags.WindowMinimized))
+			if ((flags & FLAG_WINDOW_MINIMIZED) != 0)
 			{
 				if (RaylibInternal.Window.WindowState == WindowState.Minimized)
 					RaylibInternal.Window.WindowState = WindowState.Normal;
 			}
 			
-			if (windowStateFlags.HasFlag(WindowStateFlags.WindowHidden))
+			if ((flags & FLAG_WINDOW_HIDDEN) != 0)
 				RaylibInternal.Window.IsVisible = true;
 			
-			if (windowStateFlags.HasFlag(WindowStateFlags.WindowUndecorated))
+			if ((flags & FLAG_WINDOW_UNDECORATED) != 0)
 				RaylibInternal.Window.WindowBorder = WindowBorder.Fixed;
 		}
 		
-		public static void ClearWindowState(WindowStateFlags flags)
-		{
-			// Clear specific window state flags
-			if (RaylibInternal.Window == null) return;
-			
-			if (flags.HasFlag(WindowStateFlags.FullscreenMode))
-			{
-				if (RaylibInternal.Window.WindowState == WindowState.Fullscreen)
-					RaylibInternal.Window.WindowState = WindowState.Normal;
-			}
-			
-			if (flags.HasFlag(WindowStateFlags.WindowMaximized))
-			{
-				if (RaylibInternal.Window.WindowState == WindowState.Maximized)
-					RaylibInternal.Window.WindowState = WindowState.Normal;
-			}
-			
-			if (flags.HasFlag(WindowStateFlags.WindowMinimized))
-			{
-				if (RaylibInternal.Window.WindowState == WindowState.Minimized)
-					RaylibInternal.Window.WindowState = WindowState.Normal;
-			}
-		}
 
 		public static void ToggleFullscreen()
 		{
@@ -1986,24 +1958,6 @@ namespace SilkRay
 		PlatformDrm = 0x40000000          // Set platform to DRM
 	}
 
-	// Window state flags
-	[Flags]
-	public enum WindowStateFlags : uint
-	{
-		FullscreenMode = 0x00000001,
-		WindowResizable = 0x00000002,
-		WindowUndecorated = 0x00000004,
-		WindowHidden = 0x00000008,
-		WindowMinimized = 0x00000010,
-		WindowMaximized = 0x00000020,
-		WindowUnfocused = 0x00000040,
-		WindowTopmost = 0x00000080,
-		WindowAlwaysRun = 0x00000100,
-		WindowTransparent = 0x00000200,
-		WindowHighdpi = 0x00000400,
-		WindowMousePassthrough = 0x00000800,
-		BorderlessWindowedMode = 0x00001000
-	}
 
 	// Global keyboard key constants (Raylib style)
 	public static class KeyboardKeys
@@ -2118,5 +2072,26 @@ namespace SilkRay
 		public const int KEY_KP_ADD = 334;
 		public const int KEY_KP_ENTER = 335;
 		public const int KEY_KP_EQUAL = 336;
+	}
+
+	// Global window flag constants (Raylib style)
+	public static class WindowFlags
+	{
+		public const int FLAG_VSYNC_HINT = 0x00000040;           // Set to try enabling V-Sync on GPU
+		public const int FLAG_FULLSCREEN_MODE = 0x00000002;      // Set to run program in fullscreen
+		public const int FLAG_WINDOW_RESIZABLE = 0x00000004;     // Set to allow resizable window
+		public const int FLAG_WINDOW_UNDECORATED = 0x00000008;   // Set to disable window decoration (frame and buttons)
+		public const int FLAG_WINDOW_HIDDEN = 0x00000080;        // Set to hide window
+		public const int FLAG_WINDOW_MINIMIZED = 0x00000200;     // Set to minimize window (iconify)
+		public const int FLAG_WINDOW_MAXIMIZED = 0x00000400;     // Set to maximize window (expanded to monitor)
+		public const int FLAG_WINDOW_UNFOCUSED = 0x00000800;     // Set to window non focused
+		public const int FLAG_WINDOW_TOPMOST = 0x00001000;       // Set to window always on top
+		public const int FLAG_WINDOW_ALWAYS_RUN = 0x00000100;    // Set to allow windows running while minimized
+		public const int FLAG_WINDOW_TRANSPARENT = 0x00000010;   // Set to allow transparent framebuffer
+		public const int FLAG_WINDOW_HIGHDPI = 0x00002000;       // Set to support HighDPI
+		public const int FLAG_WINDOW_MOUSE_PASSTHROUGH = 0x00004000; // Set to support mouse passthrough, only supported when FLAG_WINDOW_UNDECORATED
+		public const int FLAG_BORDERLESS_WINDOWED_MODE = 0x00008000; // Set to run program in borderless windowed mode
+		public const int FLAG_MSAA_4X_HINT = 0x00000020;         // Set to try enabling MSAA 4X
+		public const int FLAG_INTERLACED_HINT = 0x00010000;      // Set to try enabling interlaced video format (for V3D)
 	}
 }
