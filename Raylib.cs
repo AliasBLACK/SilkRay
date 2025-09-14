@@ -1168,14 +1168,31 @@ namespace SilkRay
 
         public static Vector2 GetMousePosition()
         {
-            // This would need mouse input handling
-            return Vector2.Zero; // Placeholder
+            if (RaylibInternal.Input == null) return Vector2.Zero;
+            
+            var mice = RaylibInternal.Input.Mice;
+            if (mice.Count == 0) return Vector2.Zero;
+            
+            var mouse = mice[0];
+            return new Vector2(mouse.Position.X, mouse.Position.Y);
         }
 
         public static bool IsMouseButtonPressed(MouseButton button)
         {
-            // This would need mouse input handling
-            return false; // Placeholder
+            if (RaylibInternal.Input == null) return false;
+            
+            var mice = RaylibInternal.Input.Mice;
+            if (mice.Count == 0) return false;
+            
+            var mouse = mice[0];
+            
+            return button switch
+            {
+                MouseButton.Left => mouse.IsButtonPressed(Silk.NET.Input.MouseButton.Left),
+                MouseButton.Right => mouse.IsButtonPressed(Silk.NET.Input.MouseButton.Right),
+                MouseButton.Middle => mouse.IsButtonPressed(Silk.NET.Input.MouseButton.Middle),
+                _ => false
+            };
         }
 
         // Text rendering functions (placeholder)
