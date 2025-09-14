@@ -1,75 +1,116 @@
-using Veldrid;
-using Veldrid.SPIRV;
-using System.Text;
+using Silk.NET.OpenGL;
+using System;
+using System.Numerics;
 
-namespace VeldridRaylib
+namespace SilkRay
 {
     /// <summary>
-    /// Shader management for basic rendering
+    /// Shader program wrapper for OpenGL shaders
     /// </summary>
-    public class ShaderSet : IDisposable
+    public class Shader : IDisposable
     {
-        public Shader VertexShader { get; private set; } = null!;
-        public Shader FragmentShader { get; private set; } = null!;
+        private readonly GL _gl;
+        private readonly uint _program;
+        private bool _disposed;
 
-        public ShaderSet(GraphicsDevice device)
+        public uint Program => _program;
+
+        public Shader(GL gl, string vertexSource, string fragmentSource)
         {
-            CreateShaders(device);
+            _gl = gl ?? throw new ArgumentNullException(nameof(gl));
+
+            // Compile vertex shader
+            uint vertexShader = CompileShader(ShaderType.VertexShader, vertexSource);
+            
+            // Compile fragment shader
+            uint fragmentShader = CompileShader(ShaderType.FragmentShader, fragmentSource);
+
+            // Create and link program
+            _program = _gl.CreateProgram();
+            _gl.AttachShader(_program, vertexShader);
+            _gl.AttachShader(_program, fragmentShader);
+            _gl.LinkProgram(_program);
+
+            // Check for linking errors
+            _gl.GetProgram(_program, GLEnum.LinkStatus, out int linkStatus);
+            if (linkStatus == 0)
+            {
+                string infoLog = _gl.GetProgramInfoLog(_program);
+                throw new InvalidOperationException($"Shader program linking failed: {infoLog}");
+            }
+
+            // Clean up individual shaders
+            _gl.DeleteShader(vertexShader);
+            _gl.DeleteShader(fragmentShader);
         }
 
-        private void CreateShaders(GraphicsDevice device)
+        private uint CompileShader(ShaderType type, string source)
         {
-            // GLSL 450 shaders that will be cross-compiled to SPIR-V
-            string vertexShaderSource = @"
-#version 450
+            uint shader = _gl.CreateShader(type);
+            _gl.ShaderSource(shader, source);
+            _gl.CompileShader(shader);
 
-layout(location = 0) in vec2 Position;
-layout(location = 1) in vec4 Color;
+            // Check for compilation errors
+            _gl.GetShader(shader, ShaderParameterName.CompileStatus, out int compileStatus);
+            if (compileStatus == 0)
+            {
+                string infoLog = _gl.GetShaderInfoLog(shader);
+                _gl.DeleteShader(shader);
+                throw new InvalidOperationException($"Shader compilation failed ({type}): {infoLog}");
+            }
 
-layout(set = 0, binding = 0) uniform ProjectionBuffer
-{
-    mat4 Projection;
-};
+            return shader;
+        }
 
-layout(location = 0) out vec4 fsin_Color;
+        public void Use()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Shader));
+            
+            _gl.UseProgram(_program);
+        }
 
-void main()
-{
-    gl_Position = Projection * vec4(Position, 0, 1);
-    fsin_Color = Color;
-}";
+        public void SetUniform(string name, int value)
+        {
+            int location = _gl.GetUniformLocation(_program, name);
+            if (location >= 0)
+                _gl.Uniform1(location, value);
+        }
 
-            string fragmentShaderSource = @"
-#version 450
+        public void SetUniform(string name, float value)
+        {
+            int location = _gl.GetUniformLocation(_program, name);
+            if (location >= 0)
+                _gl.Uniform1(location, value);
+        }
 
-layout(location = 0) in vec4 fsin_Color;
-layout(location = 0) out vec4 fsout_Color;
+        public void SetUniform(string name, Vector2 value)
+        {
+            int location = _gl.GetUniformLocation(_program, name);
+            if (location >= 0)
+                _gl.Uniform2(location, value.X, value.Y);
+        }
 
-void main()
-{
-    fsout_Color = fsin_Color;
-}";
+        public void SetUniform(string name, Vector4 value)
+        {
+            int location = _gl.GetUniformLocation(_program, name);
+            if (location >= 0)
+                _gl.Uniform4(location, value.X, value.Y, value.Z, value.W);
+        }
 
-            // Cross-compile GLSL to SPIR-V for all backends
-            var vertexShaderDesc = new ShaderDescription(
-                ShaderStages.Vertex,
-                Encoding.UTF8.GetBytes(vertexShaderSource),
-                "main");
-
-            var fragmentShaderDesc = new ShaderDescription(
-                ShaderStages.Fragment,
-                Encoding.UTF8.GetBytes(fragmentShaderSource),
-                "main");
-
-            var shaders = device.ResourceFactory.CreateFromSpirv(vertexShaderDesc, fragmentShaderDesc);
-            VertexShader = shaders[0];
-            FragmentShader = shaders[1];
+        public void SetUniform(string name, Color color)
+        {
+            SetUniform(name, color.ToVector4());
         }
 
         public void Dispose()
         {
-            VertexShader?.Dispose();
-            FragmentShader?.Dispose();
+            if (!_disposed)
+            {
+                _gl.DeleteProgram(_program);
+                _disposed = true;
+            }
+            GC.SuppressFinalize(this);
         }
     }
 }

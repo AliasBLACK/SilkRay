@@ -1,361 +1,316 @@
-using Veldrid;
-using Veldrid.Sdl2;
-using Veldrid.StartupUtilities;
-using System.Numerics;
+using Silk.NET.OpenGL;
+using Silk.NET.Windowing;
+using Silk.NET.Input;
+using System;
 
-namespace VeldridRaylib
+namespace SilkRay
 {
     /// <summary>
-    /// Main raylib API implementation using Veldrid
+    /// Core Raylib functions implementation using Silk.NET
     /// </summary>
     public static class Raylib
     {
-        private static Sdl2Window? _window;
-        private static GraphicsDevice? _graphicsDevice;
+        private static IWindow? _window;
+        private static GL? _gl;
         private static Renderer? _renderer;
-        private static bool _windowShouldClose = false;
-        private static Dictionary<Veldrid.Key, bool> _keyStates = new();
-        private static Dictionary<Veldrid.Key, bool> _previousKeyStates = new();
-        private static Vector2 _mousePosition = Vector2.Zero;
+        private static IInputContext? _input;
+        private static bool _shouldClose;
 
-        // Window management
+        // Window-related functions (rcore)
         public static void InitWindow(int width, int height, string title)
         {
-            try
+            var options = WindowOptions.Default;
+            options.Size = new Silk.NET.Maths.Vector2D<int>(width, height);
+            options.Title = title;
+            options.VSync = true;
+            options.UpdatesPerSecond = 60;
+            options.FramesPerSecond = 60;
+
+            _window = Window.Create(options);
+            
+            _window.Load += OnLoad;
+            _window.Update += OnUpdate;
+            _window.Render += OnRender;
+            _window.Resize += OnResize;
+            _window.Closing += OnClosing;
+            
+            // Initialize the window immediately for traditional loop usage
+            _window.Initialize();
+            
+            if (_window.IsInitialized)
             {
-                Console.WriteLine($"Creating window: {width}x{height} - {title}");
-                var windowCI = new WindowCreateInfo(50, 50, width, height, WindowState.Normal, title);
-                _window = VeldridStartup.CreateWindow(ref windowCI);
-                Console.WriteLine("Window created successfully");
-                
-                // Try different graphics backends in order of preference for compatibility
-                GraphicsBackend[] backends = { GraphicsBackend.OpenGL, GraphicsBackend.Direct3D11, GraphicsBackend.Vulkan };
-                
-                foreach (var backend in backends)
-                {
-                    try
-                    {
-                        Console.WriteLine($"Trying graphics backend: {backend}");
-                        var options = new GraphicsDeviceOptions(
-                            debug: false,
-                            swapchainDepthFormat: null,
-                            syncToVerticalBlank: true,
-                            resourceBindingModel: ResourceBindingModel.Default);
-                        
-                        _graphicsDevice = VeldridStartup.CreateGraphicsDevice(_window, options, backend);
-                        Console.WriteLine($"Graphics device created successfully: {_graphicsDevice.BackendType}");
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Failed to create graphics device with {backend}: {ex.Message}");
-                        continue;
-                    }
-                }
-
-                if (_graphicsDevice == null)
-                {
-                    throw new Exception("Failed to create graphics device with any backend");
-                }
-
-                Console.WriteLine("Creating renderer...");
-                _renderer = new Renderer(_graphicsDevice);
-                Console.WriteLine("Renderer created successfully");
-
-                // Set up orthographic projection
-                var projection = Matrix4x4.CreateOrthographicOffCenter(0, width, height, 0, -1, 1);
-                _renderer.SetProjection(projection);
-
-                // Set up input handling
-                _window.KeyDown += OnKeyDown;
-                _window.KeyUp += OnKeyUp;
-                _window.MouseMove += OnMouseMove;
-                _window.Closed += () => _windowShouldClose = true;
-                
-                Console.WriteLine("Window initialization completed successfully");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to initialize window: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                throw;
+                OnLoad();
             }
         }
 
         public static bool WindowShouldClose()
         {
-            return _windowShouldClose;
+            if (_window == null || !_window.IsInitialized) return true;
+            
+            // Process window events to keep window responsive
+            try
+            {
+                _window.DoEvents();
+                return _shouldClose || _window.IsClosing;
+            }
+            catch
+            {
+                return true;
+            }
         }
 
         public static void CloseWindow()
         {
-            _windowShouldClose = true;
-            _renderer?.Dispose();
-            _graphicsDevice?.Dispose();
+            _shouldClose = true;
             _window?.Close();
         }
 
         public static void SetTargetFPS(int fps)
         {
-            // Note: This is a simplified implementation
-            // In a real implementation, you'd want proper frame timing
+            // Silk.NET handles FPS through VSync and the render loop
+            // This is a placeholder for API compatibility
         }
 
-        // Drawing functions
+        public static int GetScreenWidth()
+        {
+            return _window?.Size.X ?? 0;
+        }
+
+        public static int GetScreenHeight()
+        {
+            return _window?.Size.Y ?? 0;
+        }
+
+        public static void SetWindowTitle(string title)
+        {
+            if (_window != null)
+                _window.Title = title;
+        }
+
+        // Drawing-related functions (rcore)
         public static void BeginDrawing()
         {
-            if (_window == null || _graphicsDevice == null || _renderer == null) return;
-
-            // Update previous key states BEFORE processing new events
-            _previousKeyStates.Clear();
-            foreach (var kvp in _keyStates)
-            {
-                _previousKeyStates[kvp.Key] = kvp.Value;
-            }
-
-            var inputSnapshot = _window.PumpEvents();
-
-            _renderer.BeginFrame();
+            _renderer?.BeginDrawing();
         }
 
         public static void EndDrawing()
         {
-            if (_graphicsDevice == null || _renderer == null) return;
-
-            var commandList = _renderer.GetCommandList();
-            commandList.Begin();
-            commandList.SetFramebuffer(_graphicsDevice.SwapchainFramebuffer);
+            _renderer?.EndDrawing();
             
-            // Clear the screen first
-            commandList.ClearColorTarget(0, _renderer.GetClearColor());
-            
-            // Render all accumulated vertices
-            _renderer.Flush(commandList);
-            
-            commandList.End();
-            _graphicsDevice.SubmitCommands(commandList);
-            _graphicsDevice.SwapBuffers();
+            // Present the frame by swapping buffers
+            _window?.SwapBuffers();
         }
 
         public static void ClearBackground(Color color)
         {
-            if (_graphicsDevice == null || _renderer == null) return;
-
-            var colorVec = color.ToVector4();
-            _renderer.SetClearColor(new RgbaFloat(colorVec.X, colorVec.Y, colorVec.Z, colorVec.W));
+            _renderer?.ClearBackground(color);
         }
 
-        // Shape drawing functions
-        public static void DrawRectangle(int posX, int posY, int width, int height, Color color)
-        {
-            DrawRectangleRec(new Rectangle(posX, posY, width, height), color);
-        }
-
-        public static void DrawRectangleRec(Rectangle rec, Color color)
-        {
-            if (_renderer == null) return;
-
-            var p1 = new Vector2(rec.X, rec.Y);
-            var p2 = new Vector2(rec.X + rec.Width, rec.Y);
-            var p3 = new Vector2(rec.X + rec.Width, rec.Y + rec.Height);
-            var p4 = new Vector2(rec.X, rec.Y + rec.Height);
-
-            _renderer.DrawQuad(p1, p2, p3, p4, color);
-        }
-
-        public static void DrawCircle(int centerX, int centerY, float radius, Color color)
-        {
-            DrawCircleV(new Vector2(centerX, centerY), radius, color);
-        }
-
-        public static void DrawCircleV(Vector2 center, float radius, Color color)
-        {
-            if (_renderer == null) return;
-
-            // Draw circle as multiple triangles
-            int segments = Math.Max(12, (int)(radius * 0.5f));
-            float angleStep = (float)(2 * Math.PI / segments);
-
-            for (int i = 0; i < segments; i++)
-            {
-                float angle1 = i * angleStep;
-                float angle2 = (i + 1) * angleStep;
-
-                var p1 = center;
-                var p2 = center + new Vector2((float)Math.Cos(angle1) * radius, (float)Math.Sin(angle1) * radius);
-                var p3 = center + new Vector2((float)Math.Cos(angle2) * radius, (float)Math.Sin(angle2) * radius);
-
-                _renderer.DrawTriangle(p1, p2, p3, color);
-            }
-        }
-
-        public static void DrawLine(int startPosX, int startPosY, int endPosX, int endPosY, Color color)
-        {
-            DrawLineV(new Vector2(startPosX, startPosY), new Vector2(endPosX, endPosY), color);
-        }
-
-        public static void DrawLineV(Vector2 startPos, Vector2 endPos, Color color)
-        {
-            if (_renderer == null) return;
-
-            // Draw line as a thin rectangle
-            var direction = endPos - startPos;
-            var length = direction.Length();
-            if (length < 0.001f) return;
-
-            var normalized = direction / length;
-            var perpendicular = new Vector2(-normalized.Y, normalized.X);
-            float thickness = 1.0f;
-
-            var p1 = startPos + perpendicular * thickness * 0.5f;
-            var p2 = startPos - perpendicular * thickness * 0.5f;
-            var p3 = endPos - perpendicular * thickness * 0.5f;
-            var p4 = endPos + perpendicular * thickness * 0.5f;
-
-            _renderer.DrawQuad(p1, p2, p3, p4, color);
-        }
-
+        // Shape drawing functions (rshapes)
         public static void DrawPixel(int posX, int posY, Color color)
         {
             DrawRectangle(posX, posY, 1, 1, color);
         }
 
-        // Text functions (simplified - no actual font rendering)
-        public static void DrawText(string text, int posX, int posY, int fontSize, Color color)
+        public static void DrawPixelV(Vector2 position, Color color)
         {
-            // This is a placeholder - real text rendering would require font loading and glyph rendering
-            // For now, just draw a rectangle to indicate text position
-            int textWidth = text.Length * fontSize / 2;
-            DrawRectangle(posX, posY, textWidth, fontSize, color);
+            DrawPixel((int)position.X, (int)position.Y, color);
         }
 
-        public static int MeasureText(string text, int fontSize)
+        public static void DrawLine(int startPosX, int startPosY, int endPosX, int endPosY, Color color)
         {
-            // Simplified text measurement
-            return text.Length * fontSize / 2;
+            _renderer?.DrawLine(startPosX, startPosY, endPosX, endPosY, color);
         }
 
-        // Input functions
-        public static bool IsKeyPressed(KeyCode key)
+        public static void DrawLineV(Vector2 startPos, Vector2 endPos, Color color)
         {
-            var veldridKey = (Veldrid.Key)(int)key;
-            bool currentState = _keyStates.GetValueOrDefault(veldridKey, false);
-            bool previousState = _previousKeyStates.GetValueOrDefault(veldridKey, false);
-            return currentState && !previousState;
+            DrawLine((int)startPos.X, (int)startPos.Y, (int)endPos.X, (int)endPos.Y, color);
         }
 
-        public static bool IsKeyDown(KeyCode key)
+        public static void DrawLineEx(Vector2 startPos, Vector2 endPos, float thick, Color color)
         {
-            var veldridKey = (Veldrid.Key)(int)key;
-            return _keyStates.GetValueOrDefault(veldridKey, false);
+            if (thick <= 1.0f)
+            {
+                // For thin lines, use regular line drawing
+                DrawLine((int)startPos.X, (int)startPos.Y, (int)endPos.X, (int)endPos.Y, color);
+                return;
+            }
+
+            // Use the renderer's thick line drawing capability
+            _renderer?.DrawThickLine(startPos.X, startPos.Y, endPos.X, endPos.Y, thick, color);
         }
 
-        public static bool IsKeyReleased(KeyCode key)
+        public static void DrawCircle(int centerX, int centerY, float radius, Color color)
         {
-            var veldridKey = (Veldrid.Key)(int)key;
-            return !_keyStates.GetValueOrDefault(veldridKey, false) && 
-                   _previousKeyStates.GetValueOrDefault(veldridKey, false);
+            _renderer?.DrawCircle(centerX, centerY, radius, color);
         }
 
-        public static bool IsKeyUp(KeyCode key)
+        public static void DrawCircleV(Vector2 center, float radius, Color color)
         {
-            var veldridKey = (Veldrid.Key)(int)key;
-            return !_keyStates.GetValueOrDefault(veldridKey, false);
+            DrawCircle((int)center.X, (int)center.Y, radius, color);
         }
 
-        public static Vector2 GetMousePosition()
+        public static void DrawCircleLines(int centerX, int centerY, float radius, Color color)
         {
-            return _mousePosition;
+            _renderer?.DrawCircleLines(centerX, centerY, radius, color, false);
         }
 
-        public static bool IsMouseButtonPressed(MouseButton button)
+        public static void DrawCircleLinesV(Vector2 center, float radius, Color color)
         {
-            // Simplified - would need proper mouse button tracking
-            return false;
+            DrawCircleLines((int)center.X, (int)center.Y, radius, color);
         }
 
-        // Utility functions
-        public static int GetScreenWidth()
+        public static void DrawRectangle(int posX, int posY, int width, int height, Color color)
         {
-            return _window?.Width ?? 0;
+            _renderer?.DrawRectangle(posX, posY, width, height, color);
         }
 
-        public static int GetScreenHeight()
+        public static void DrawRectangleV(Vector2 position, Vector2 size, Color color)
         {
-            return _window?.Height ?? 0;
+            DrawRectangle((int)position.X, (int)position.Y, (int)size.X, (int)size.Y, color);
+        }
+
+        public static void DrawRectangleRec(Rectangle rec, Color color)
+        {
+            DrawRectangle((int)rec.X, (int)rec.Y, (int)rec.Width, (int)rec.Height, color);
+        }
+
+        public static void DrawRectangleLines(int posX, int posY, int width, int height, Color color)
+        {
+            // Draw rectangle outline using lines
+            DrawLine(posX, posY, posX + width, posY, color);                    // Top
+            DrawLine(posX + width, posY, posX + width, posY + height, color);   // Right
+            DrawLine(posX + width, posY + height, posX, posY + height, color);  // Bottom
+            DrawLine(posX, posY + height, posX, posY, color);                   // Left
+        }
+
+        public static void DrawRectangleLinesEx(Rectangle rec, float lineThick, Color color)
+        {
+            if (lineThick <= 1.0f)
+            {
+                // Use regular lines for thin thickness
+                DrawRectangleLines((int)rec.X, (int)rec.Y, (int)rec.Width, (int)rec.Height, color);
+            }
+            else
+            {
+                // Draw thick lines by drawing filled rectangles for each side
+                int thickness = (int)Math.Ceiling(lineThick);
+                
+                // Top line
+                DrawRectangle((int)rec.X, (int)rec.Y, (int)rec.Width, thickness, color);
+                // Bottom line
+                DrawRectangle((int)rec.X, (int)(rec.Y + rec.Height - thickness), (int)rec.Width, thickness, color);
+                // Left line
+                DrawRectangle((int)rec.X, (int)rec.Y, thickness, (int)rec.Height, color);
+                // Right line
+                DrawRectangle((int)(rec.X + rec.Width - thickness), (int)rec.Y, thickness, (int)rec.Height, color);
+            }
+        }
+
+        // Timing functions (rcore)
+        public static double GetTime()
+        {
+            return DateTime.Now.TimeOfDay.TotalSeconds;
         }
 
         public static float GetFrameTime()
         {
-            // Simplified - would need proper frame timing
-            return 1.0f / 60.0f;
+            // This would need to be calculated based on actual frame timing
+            return 1.0f / 60.0f; // Assume 60 FPS for now
         }
 
         public static int GetFPS()
         {
-            // Simplified
-            return 60;
+            return 60; // Placeholder
         }
+
 
         // Event handlers
-        private static void OnKeyDown(KeyEvent keyEvent)
+        private static void OnLoad()
         {
-            _keyStates[keyEvent.Key] = true;
+            if (_window == null) return;
+
+            _gl = _window.CreateOpenGL();
+            _renderer = new Renderer(_gl, _window.Size.X, _window.Size.Y);
+            _input = _window.CreateInput();
         }
 
-        private static void OnKeyUp(KeyEvent keyEvent)
+        private static void OnUpdate(double deltaTime)
         {
-            _keyStates[keyEvent.Key] = false;
+            // Update logic handled by user code
         }
 
-        private static void OnMouseMove(MouseMoveEventArgs args)
+        private static void OnRender(double deltaTime)
         {
-            _mousePosition = new Vector2(args.MousePosition.X, args.MousePosition.Y);
+            // Rendering is handled by user code in the main loop
+        }
+
+        private static void OnResize(Silk.NET.Maths.Vector2D<int> size)
+        {
+            _renderer?.Resize(size.X, size.Y);
+        }
+
+        private static void OnClosing()
+        {
+            _renderer?.Dispose();
+            _gl?.Dispose();
+        }
+
+        // Input functions (basic)
+        public static bool IsKeyPressed(KeyboardKey key)
+        {
+            // This would need proper key mapping and state tracking
+            return false; // Placeholder
+        }
+
+        public static bool IsKeyDown(KeyboardKey key)
+        {
+            // This would need proper key mapping and state tracking
+            return false; // Placeholder
+        }
+
+        public static Vector2 GetMousePosition()
+        {
+            // This would need mouse input handling
+            return Vector2.Zero; // Placeholder
+        }
+
+        public static bool IsMouseButtonPressed(MouseButton button)
+        {
+            // This would need mouse input handling
+            return false; // Placeholder
+        }
+
+        // Text rendering functions (placeholder)
+        public static void DrawText(string text, int posX, int posY, int fontSize, Color color)
+        {
+            // Text rendering placeholder - would need font loading and text mesh generation
+            // This maintains API compatibility with Raylib
         }
     }
 
-    // Key codes enum (simplified)
-    public enum KeyCode
+    // Additional structures for API compatibility
+    public struct Rectangle(float x, float y, float width, float height)
     {
-        Space = (int)Veldrid.Key.Space,
-        Enter = (int)Veldrid.Key.Enter,
-        Escape = (int)Veldrid.Key.Escape,
-        A = (int)Veldrid.Key.A,
-        B = (int)Veldrid.Key.B,
-        C = (int)Veldrid.Key.C,
-        D = (int)Veldrid.Key.D,
-        E = (int)Veldrid.Key.E,
-        F = (int)Veldrid.Key.F,
-        G = (int)Veldrid.Key.G,
-        H = (int)Veldrid.Key.H,
-        I = (int)Veldrid.Key.I,
-        J = (int)Veldrid.Key.J,
-        K = (int)Veldrid.Key.K,
-        L = (int)Veldrid.Key.L,
-        M = (int)Veldrid.Key.M,
-        N = (int)Veldrid.Key.N,
-        O = (int)Veldrid.Key.O,
-        P = (int)Veldrid.Key.P,
-        Q = (int)Veldrid.Key.Q,
-        R = (int)Veldrid.Key.R,
-        S = (int)Veldrid.Key.S,
-        T = (int)Veldrid.Key.T,
-        U = (int)Veldrid.Key.U,
-        V = (int)Veldrid.Key.V,
-        W = (int)Veldrid.Key.W,
-        X = (int)Veldrid.Key.X,
-        Y = (int)Veldrid.Key.Y,
-        Z = (int)Veldrid.Key.Z,
-        Up = (int)Veldrid.Key.Up,
-        Down = (int)Veldrid.Key.Down,
-        Left = (int)Veldrid.Key.Left,
-        Right = (int)Veldrid.Key.Right
+        public float X = x;
+        public float Y = y;
+        public float Width = width;
+        public float Height = height;
+    }
+
+    // Enums for input (simplified)
+    public enum KeyboardKey
+    {
+        Space = 32,
+        Escape = 256,
+        Enter = 257,
+        // Add more keys as needed
     }
 
     public enum MouseButton
     {
-        Left,
-        Right,
-        Middle
+        Left = 0,
+        Right = 1,
+        Middle = 2
     }
 }

@@ -1,79 +1,50 @@
-# VeldridRaylib - Raylib API Implementation using Veldrid
+# SilkRay
 
-A C# implementation of the core raylib API using Veldrid as the graphics backend. This project provides a familiar raylib-style interface for 2D graphics programming while leveraging Veldrid's modern, cross-platform graphics capabilities.
+A C# implementation of core Raylib functions using Silk.NET OpenGL bindings.
+
+## Overview
+
+SilkRay provides a familiar Raylib-style API for 2D graphics programming in C# using modern Silk.NET libraries. It implements the core functionality from Raylib's `rcore` and `rshapes` modules.
 
 ## Features
 
-### Core Window Management
-- `InitWindow(width, height, title)` - Initialize graphics window
-- `WindowShouldClose()` - Check if window should close
-- `CloseWindow()` - Close window and cleanup resources
-- `SetTargetFPS(fps)` - Set target frames per second
+### Core Functions (rcore)
+- Window management (`InitWindow`, `CloseWindow`, `WindowShouldClose`)
+- Drawing lifecycle (`BeginDrawing`, `EndDrawing`, `ClearBackground`)
+- Screen properties (`GetScreenWidth`, `GetScreenHeight`)
+- Timing functions (`GetTime`, `GetFrameTime`, `GetFPS`)
 
-### Drawing Functions
-- `BeginDrawing()` / `EndDrawing()` - Begin/end drawing frame
-- `ClearBackground(color)` - Clear screen with specified color
+### Shape Drawing (rshapes)
+- **Pixels**: `DrawPixel`, `DrawPixelV`
+- **Lines**: `DrawLine`, `DrawLineV`, `DrawLineEx`
+- **Rectangles**: `DrawRectangle`, `DrawRectangleV`, `DrawRectangleRec`, `DrawRectangleLines`
+- **Circles**: `DrawCircle`, `DrawCircleV`, `DrawCircleLines`
 
-### Shape Drawing
-- `DrawRectangle(x, y, width, height, color)` - Draw rectangle
-- `DrawRectangleRec(rectangle, color)` - Draw rectangle from Rectangle struct
-- `DrawCircle(centerX, centerY, radius, color)` - Draw circle
-- `DrawCircleV(center, radius, color)` - Draw circle from Vector2
-- `DrawLine(startX, startY, endX, endY, color)` - Draw line
-- `DrawLineV(startPos, endPos, color)` - Draw line from Vector2s
-- `DrawPixel(x, y, color)` - Draw single pixel
+### Data Structures
+- `Color` - RGBA color with predefined constants
+- `Vector2` - 2D vector math operations
+- `Rectangle` - Rectangle structure for bounds
 
-### Text Rendering (Basic)
-- `DrawText(text, x, y, fontSize, color)` - Draw text (placeholder implementation)
-- `MeasureText(text, fontSize)` - Measure text width
-
-### Input Handling
-- `IsKeyPressed(key)` - Check if key was just pressed
-- `IsKeyDown(key)` - Check if key is currently held down
-- `IsKeyReleased(key)` - Check if key was just released
-- `IsKeyUp(key)` - Check if key is not pressed
-- `GetMousePosition()` - Get current mouse position
-
-### Utility Functions
-- `GetScreenWidth()` / `GetScreenHeight()` - Get screen dimensions
-- `GetFrameTime()` - Get time for last frame
-- `GetFPS()` - Get current FPS
-
-## Dependencies
-
-- **Veldrid** (4.9.0) - Modern graphics API abstraction
-- **Veldrid.StartupUtilities** (4.9.0) - Window and graphics device creation helpers
-- **Veldrid.SDL2** (4.9.0) - SDL2 backend for windowing
-- **System.Numerics.Vectors** (4.5.0) - Vector math support
-
-## Building and Running
-
-```bash
-dotnet restore
-dotnet build
-dotnet run
-```
-
-## Example Usage
+## Quick Start
 
 ```csharp
-using VeldridRaylib;
+using SilkRay;
 
 // Initialize window
-Raylib.InitWindow(800, 450, "My Game");
+Raylib.InitWindow(800, 450, "My SilkRay App");
 Raylib.SetTargetFPS(60);
 
-// Main game loop
+// Main loop
 while (!Raylib.WindowShouldClose())
 {
-    // Update game logic here
-    
     Raylib.BeginDrawing();
     
-    Raylib.ClearBackground(Color.DarkGray);
-    Raylib.DrawRectangle(100, 100, 200, 150, Color.Red);
+    Raylib.ClearBackground(Color.RayWhite);
+    
+    // Draw shapes
+    Raylib.DrawRectangle(100, 100, 200, 100, Color.Red);
     Raylib.DrawCircle(400, 200, 50, Color.Blue);
-    Raylib.DrawText("Hello World!", 10, 10, 20, Color.White);
+    Raylib.DrawLine(0, 0, 800, 450, Color.Green);
     
     Raylib.EndDrawing();
 }
@@ -81,29 +52,60 @@ while (!Raylib.WindowShouldClose())
 Raylib.CloseWindow();
 ```
 
+## Examples
+
+The project includes several example programs:
+
+1. **Basic Shapes** - Demonstrates all shape drawing functions
+2. **Animation** - Shows a bouncing ball with trail effects
+3. **Color Palette** - Displays all predefined colors
+
+Run examples:
+```csharp
+Example.RunBasicShapesExample();
+Example.RunAnimatedExample();
+Example.RunColorPaletteExample();
+```
+
+## Building
+
+```bash
+dotnet restore
+dotnet build
+dotnet run
+```
+
+## Dependencies
+
+- Silk.NET.OpenGL (2.20.0)
+- Silk.NET.Windowing (2.20.0)
+- Silk.NET.Input (2.20.0)
+- .NET 8.0
+
 ## Architecture
 
-The implementation consists of several key components:
+- **Raylib.cs** - Main API that matches Raylib function signatures
+- **Renderer.cs** - OpenGL rendering backend using Silk.NET
+- **Shader.cs** - Shader program management
+- **Color.cs** - Color utilities and predefined constants
+- **Vector2.cs** - 2D math operations
 
-- **Raylib.cs** - Main API interface matching raylib's function signatures
-- **Renderer.cs** - Core 2D renderer using Veldrid's graphics pipeline
-- **Shader.cs** - Basic vertex/fragment shaders for 2D rendering
-- **Color.cs** - Color structure with predefined colors
-- **Vector2.cs** - 2D vector and rectangle structures
+## Limitations
 
-## Current Limitations
-
-- Text rendering is placeholder (no actual font rendering)
-- Mouse button input is not fully implemented
-- No texture/image loading support
+- Text rendering not yet implemented
+- Input handling is basic (placeholders for keyboard/mouse)
+- Limited to 2D graphics
+- No texture/image loading
 - No audio support
-- Limited to basic 2D shapes and primitives
 
 ## Future Enhancements
 
-- Full text rendering with font support
-- Texture and sprite rendering
-- Audio system integration
-- More advanced shape drawing (polygons, bezier curves)
+- Font loading and text rendering
+- Complete input system implementation
+- Texture and sprite support
+- Additional shape primitives
 - Performance optimizations
-- Additional input handling features
+
+## License
+
+This project is provided as-is for educational and development purposes.

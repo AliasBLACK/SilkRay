@@ -1,246 +1,280 @@
-using Veldrid;
-using Veldrid.SPIRV;
+using Silk.NET.OpenGL;
+using System;
 using System.Numerics;
-using System.Runtime.InteropServices;
-using System.Text;
 
-namespace VeldridRaylib
+namespace SilkRay
 {
     /// <summary>
-    /// Vertex structure for rendering
+    /// OpenGL renderer for 2D graphics operations
     /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
-    public struct Vertex
+    public unsafe class Renderer : IDisposable
     {
-        public Vector2 Position;
-        public Vector4 Color;
+        private readonly GL _gl;
+        private Shader? _shader;
+        private uint _vao;
+        private uint _vbo;
+        private Vector2 _screenSize;
+        private bool _disposed;
 
-        public Vertex(Vector2 position, Vector4 color)
+        public Renderer(GL gl, int width, int height)
         {
-            Position = position;
-            Color = color;
+            _gl = gl ?? throw new ArgumentNullException(nameof(gl));
+            _screenSize = new Vector2(width, height);
+            Initialize();
         }
-    }
 
-    /// <summary>
-    /// Projection matrix uniform buffer
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
-    public struct ProjectionBuffer
-    {
-        public Matrix4x4 Projection;
-
-        public ProjectionBuffer(Matrix4x4 projection)
+        private void Initialize()
         {
-            Projection = projection;
-        }
-    }
-
-    /// <summary>
-    /// Core renderer for 2D graphics using Veldrid interfaces for maximum cross-compatibility
-    /// </summary>
-    public class Renderer : IDisposable
-    {
-        private readonly GraphicsDevice _graphicsDevice;
-        private readonly CommandList _commandList;
-        private readonly DeviceBuffer _vertexBuffer;
-        private readonly DeviceBuffer _indexBuffer;
-        private readonly DeviceBuffer _projectionBuffer;
-        private readonly ResourceSet _projectionResourceSet;
-        private readonly Pipeline _pipeline;
-        private readonly ResourceLayout _projectionLayout;
-
-        private readonly List<Vertex> _vertices = new();
-        private readonly List<uint> _indices = new();
-        private uint _currentIndex = 0;
-        private RgbaFloat _clearColor = RgbaFloat.Black;
-
-        public Renderer(GraphicsDevice graphicsDevice)
-        {
-            _graphicsDevice = graphicsDevice ?? throw new ArgumentNullException(nameof(graphicsDevice));
-            
-            // Initialize command list
-            _commandList = _graphicsDevice.ResourceFactory.CreateCommandList();
-            
-            // Create shaders using cross-platform approach
-            var shaderSet = CreateShaders(_graphicsDevice);
-
-            // Create vertex buffer
-            _vertexBuffer = _graphicsDevice.ResourceFactory.CreateBuffer(new BufferDescription(
-                1024 * (uint)Marshal.SizeOf<Vertex>(), BufferUsage.VertexBuffer | BufferUsage.Dynamic));
-
-            // Create index buffer
-            _indexBuffer = _graphicsDevice.ResourceFactory.CreateBuffer(new BufferDescription(
-                1024 * sizeof(uint), BufferUsage.IndexBuffer | BufferUsage.Dynamic));
-
-            // Create projection buffer
-            _projectionBuffer = _graphicsDevice.ResourceFactory.CreateBuffer(new BufferDescription(
-                (uint)Marshal.SizeOf<ProjectionBuffer>(), BufferUsage.UniformBuffer | BufferUsage.Dynamic));
-
-            // Create resource layout - use consistent naming for all backends
-            _projectionLayout = _graphicsDevice.ResourceFactory.CreateResourceLayout(
-                new ResourceLayoutDescription(
-                    new ResourceLayoutElementDescription("ProjectionBuffer", ResourceKind.UniformBuffer, ShaderStages.Vertex)));
-
-            _projectionResourceSet = _graphicsDevice.ResourceFactory.CreateResourceSet(new ResourceSetDescription(
-                _projectionLayout, _projectionBuffer));
-
-            // Create pipeline using cross-compatible vertex layout
-            var vertexLayout = new VertexLayoutDescription(
-                new VertexElementDescription("Position", VertexElementSemantic.Position, VertexElementFormat.Float2),
-                new VertexElementDescription("Color", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float4));
-
-            var pipelineDescription = new GraphicsPipelineDescription()
+            try
             {
-                BlendState = BlendStateDescription.SingleAlphaBlend,
-                DepthStencilState = DepthStencilStateDescription.Disabled,
-                RasterizerState = RasterizerStateDescription.Default,
-                PrimitiveTopology = PrimitiveTopology.TriangleList,
-                ResourceLayouts = new[] { _projectionLayout },
-                ShaderSet = new Veldrid.ShaderSetDescription(
-                    new[] { vertexLayout },
-                    shaderSet),
-                Outputs = _graphicsDevice.SwapchainFramebuffer.OutputDescription
+                // Create shader for 2D rendering
+                const string vertexShader = @"#version 330 core
+                    layout (location = 0) in vec2 aPosition;
+                    uniform vec2 screenSize;
+                    void main()
+                    {
+                        // Convert from pixel coordinates to NDC (-1 to 1)
+                        vec2 pos = aPosition / screenSize;
+                        gl_Position = vec4(pos.x * 2.0 - 1.0, 1.0 - pos.y * 2.0, 0.0, 1.0);
+                    }";
+                    
+                const string fragmentShader = @"#version 330 core
+                    out vec4 FragColor;
+                    uniform vec4 color;
+                    void main()
+                    {
+                        FragColor = color;
+                    }";
+
+                _shader = new Shader(_gl, vertexShader, fragmentShader);
+
+                // Set up vertex array and buffer objects
+                _vao = _gl.GenVertexArray();
+                _vbo = _gl.GenBuffer();
+                
+                _gl.BindVertexArray(_vao);
+                _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
+                
+                // Set up vertex attribute pointer
+                _gl.EnableVertexAttribArray(0);
+                _gl.VertexAttribPointer(0, 2, GLEnum.Float, false, 2 * sizeof(float), (void*)0);
+                
+                // Unbind
+                _gl.BindVertexArray(0);
+                _gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
+                
+                // Enable blending for transparency
+                _gl.Enable(EnableCap.Blend);
+                _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+                _gl.Disable(EnableCap.DepthTest);
+            }
+            catch (Exception ex)
+            {
+                Dispose();
+                throw new InvalidOperationException("Failed to initialize renderer", ex);
+            }
+        }
+
+        public void BeginDrawing()
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+                
+            // Don't clear here - let ClearBackground handle it
+        }
+
+        public void EndDrawing()
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+                
+            _gl.Flush();
+        }
+
+        public void ClearBackground(Color color)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+                
+            var c = color.ToVector4();
+            _gl.ClearColor(c.X, c.Y, c.Z, c.W);
+            _gl.Clear(ClearBufferMask.ColorBufferBit);
+        }
+
+        public void DrawRectangle(float x, float y, float width, float height, Color color)
+        {
+            if (_disposed || _shader == null)
+                return;
+
+            // Define rectangle vertices
+            float[] vertices = {
+                x, y + height,          // Bottom-left
+                x, y,                   // Top-left
+                x + width, y + height,  // Bottom-right
+                x + width, y            // Top-right
             };
 
-            _pipeline = _graphicsDevice.ResourceFactory.CreateGraphicsPipeline(pipelineDescription);
-        }
+            // Bind shader and set uniforms
+            _shader.Use();
+            _shader.SetUniform("screenSize", _screenSize);
+            _shader.SetUniform("color", color);
 
-        private Shader[] CreateShaders(GraphicsDevice device)
-        {
-            // Use GLSL 450 shaders compiled to SPIR-V for maximum cross-platform compatibility
-            string vertexShaderSource = @"
-#version 450
-
-layout(location = 0) in vec2 Position;
-layout(location = 1) in vec4 Color;
-
-layout(set = 0, binding = 0) uniform ProjectionBuffer
-{
-    mat4 Projection;
-};
-
-layout(location = 0) out vec4 fsin_Color;
-
-void main()
-{
-    gl_Position = Projection * vec4(Position, 0, 1);
-    fsin_Color = Color;
-}";
-
-            string fragmentShaderSource = @"
-#version 450
-
-layout(location = 0) in vec4 fsin_Color;
-layout(location = 0) out vec4 fsout_Color;
-
-void main()
-{
-    fsout_Color = fsin_Color;
-}";
-
+            // Upload vertex data and draw
+            _gl.BindVertexArray(_vao);
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
             
-            // Compile GLSL to SPIR-V using Veldrid.SPIRV
-            var vertexShaderDesc = new ShaderDescription(
-                ShaderStages.Vertex,
-                Encoding.UTF8.GetBytes(vertexShaderSource),
-                "main");
+            fixed (float* v = &vertices[0])
+            {
+                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v, BufferUsageARB.DynamicDraw);
+            }
 
-            var fragmentShaderDesc = new ShaderDescription(
-                ShaderStages.Fragment,
-                Encoding.UTF8.GetBytes(fragmentShaderSource),
-                "main");
-
-            // Use SPIR-V cross-compilation
-            var shaders = device.ResourceFactory.CreateFromSpirv(vertexShaderDesc, fragmentShaderDesc);
+            _gl.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
             
-            return shaders;
-        }
-        public void SetProjection(Matrix4x4 projection)
-        {
-            _graphicsDevice.UpdateBuffer(_projectionBuffer, 0, new ProjectionBuffer(projection));
+            _gl.BindVertexArray(0);
         }
 
-        public void SetClearColor(RgbaFloat clearColor)
+        public void DrawCircle(float centerX, float centerY, float radius, Color color)
         {
-            _clearColor = clearColor;
+            DrawCircleLines(centerX, centerY, radius, color, true);
         }
 
-        public RgbaFloat GetClearColor()
+        public void DrawCircleLines(float centerX, float centerY, float radius, Color color, bool filled = false)
         {
-            return _clearColor;
-        }
+            if (_disposed || _shader == null)
+                return;
 
-        public void BeginFrame()
-        {
-            _vertices.Clear();
-            _indices.Clear();
-            _currentIndex = 0;
-        }
-
-        public void DrawTriangle(Vector2 p1, Vector2 p2, Vector2 p3, Color color)
-        {
-            var colorVec = color.ToVector4();
+            const int segments = 32;
+            var vertices = new float[(segments + 1 + (filled ? 1 : 0)) * 2];
             
-            _vertices.Add(new Vertex(p1, colorVec));
-            _vertices.Add(new Vertex(p2, colorVec));
-            _vertices.Add(new Vertex(p3, colorVec));
+            int index = 0;
+            if (filled)
+            {
+                // Center point for filled circle
+                vertices[index++] = centerX;
+                vertices[index++] = centerY;
+            }
 
-            _indices.Add(_currentIndex);
-            _indices.Add(_currentIndex + 1);
-            _indices.Add(_currentIndex + 2);
+            // Generate circle vertices
+            for (int i = 0; i <= segments; i++)
+            {
+                float angle = (float)(2.0 * Math.PI * i / segments);
+                vertices[index++] = centerX + radius * (float)Math.Cos(angle);
+                vertices[index++] = centerY + radius * (float)Math.Sin(angle);
+            }
 
-            _currentIndex += 3;
-        }
+            // Bind shader and set uniforms
+            _shader.Use();
+            _shader.SetUniform("screenSize", _screenSize);
+            _shader.SetUniform("color", color);
 
-        public void DrawQuad(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4, Color color)
-        {
-            var colorVec = color.ToVector4();
+            // Upload vertex data and draw
+            _gl.BindVertexArray(_vao);
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
             
-            _vertices.Add(new Vertex(p1, colorVec));
-            _vertices.Add(new Vertex(p2, colorVec));
-            _vertices.Add(new Vertex(p3, colorVec));
-            _vertices.Add(new Vertex(p4, colorVec));
+            fixed (float* v = &vertices[0])
+            {
+                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v, BufferUsageARB.DynamicDraw);
+            }
 
-            // First triangle
-            _indices.Add(_currentIndex);
-            _indices.Add(_currentIndex + 1);
-            _indices.Add(_currentIndex + 2);
-
-            // Second triangle
-            _indices.Add(_currentIndex);
-            _indices.Add(_currentIndex + 2);
-            _indices.Add(_currentIndex + 3);
-
-            _currentIndex += 4;
+            if (filled)
+                _gl.DrawArrays(PrimitiveType.TriangleFan, 0, segments + 1);
+            else
+                _gl.DrawArrays(PrimitiveType.LineLoop, 0, segments);
+            
+            _gl.BindVertexArray(0);
         }
 
-        public void Flush(CommandList commandList)
+        public void DrawLine(float startX, float startY, float endX, float endY, Color color)
         {
-            if (_vertices.Count == 0) return;
+            if (_disposed || _shader == null)
+                return;
 
-            // Update buffers
-            _graphicsDevice.UpdateBuffer(_vertexBuffer, 0, _vertices.ToArray());
-            _graphicsDevice.UpdateBuffer(_indexBuffer, 0, _indices.ToArray());
+            float[] vertices = {
+                startX, startY,
+                endX, endY
+            };
 
-            // Draw
-            commandList.SetVertexBuffer(0, _vertexBuffer);
-            commandList.SetIndexBuffer(_indexBuffer, IndexFormat.UInt32);
-            commandList.SetPipeline(_pipeline);
-            commandList.SetGraphicsResourceSet(0, _projectionResourceSet);
-            commandList.DrawIndexed((uint)_indices.Count);
+            // Bind shader and set uniforms
+            _shader.Use();
+            _shader.SetUniform("screenSize", _screenSize);
+            _shader.SetUniform("color", color);
+
+            // Upload vertex data and draw
+            _gl.BindVertexArray(_vao);
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
+            
+            fixed (float* v = &vertices[0])
+            {
+                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v, BufferUsageARB.DynamicDraw);
+            }
+
+            _gl.DrawArrays(PrimitiveType.Lines, 0, 2);
+            
+            _gl.BindVertexArray(0);
         }
 
-        public CommandList GetCommandList() => _commandList;
+        public void DrawThickLine(float startX, float startY, float endX, float endY, float thickness, Color color)
+        {
+            if (_disposed || _shader == null || thickness <= 0)
+                return;
+
+            // Calculate line direction and perpendicular vector
+            float dx = endX - startX;
+            float dy = endY - startY;
+            float length = (float)Math.Sqrt(dx * dx + dy * dy);
+            
+            if (length == 0)
+                return;
+
+            // Normalize direction and calculate perpendicular
+            dx /= length;
+            dy /= length;
+            
+            float perpX = -dy * thickness * 0.5f;
+            float perpY = dx * thickness * 0.5f;
+
+            // Calculate rectangle vertices for thick line
+            float[] vertices = {
+                startX + perpX, startY + perpY,  // Top-left
+                startX - perpX, startY - perpY,  // Bottom-left
+                endX + perpX, endY + perpY,      // Top-right
+                endX - perpX, endY - perpY       // Bottom-right
+            };
+
+            // Bind shader and set uniforms
+            _shader.Use();
+            _shader.SetUniform("screenSize", _screenSize);
+            _shader.SetUniform("color", color);
+
+            // Upload vertex data and draw as triangle strip
+            _gl.BindVertexArray(_vao);
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
+            
+            fixed (float* v = &vertices[0])
+            {
+                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v, BufferUsageARB.DynamicDraw);
+            }
+
+            _gl.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
+            
+            _gl.BindVertexArray(0);
+        }
+
+        public void Resize(int width, int height)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+                
+            _screenSize = new Vector2(width, height);
+            _gl.Viewport(0, 0, (uint)width, (uint)height);
+        }
 
         public void Dispose()
         {
-            _vertexBuffer?.Dispose();
-            _indexBuffer?.Dispose();
-            _projectionBuffer?.Dispose();
-            _projectionResourceSet?.Dispose();
-            _pipeline?.Dispose();
-            _commandList?.Dispose();
+            if (!_disposed)
+            {
+                _gl.DeleteVertexArray(_vao);
+                _gl.DeleteBuffer(_vbo);
+                _shader?.Dispose();
+                _disposed = true;
+            }
+            GC.SuppressFinalize(this);
         }
     }
 }

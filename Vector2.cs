@@ -1,9 +1,9 @@
-using System.Numerics;
+using System;
 
-namespace VeldridRaylib
+namespace SilkRay
 {
     /// <summary>
-    /// 2D Vector structure
+    /// Vector2 structure for 2D math operations
     /// </summary>
     public struct Vector2
     {
@@ -16,42 +16,74 @@ namespace VeldridRaylib
             Y = y;
         }
 
-        public static Vector2 Zero => new(0, 0);
-        public static Vector2 One => new(1, 1);
+        public Vector2(float value)
+        {
+            X = value;
+            Y = value;
+        }
 
-        public float Length() => (float)Math.Sqrt(X * X + Y * Y);
-        public float LengthSquared() => X * X + Y * Y;
-
+        // Vector operations
         public static Vector2 operator +(Vector2 a, Vector2 b) => new(a.X + b.X, a.Y + b.Y);
         public static Vector2 operator -(Vector2 a, Vector2 b) => new(a.X - b.X, a.Y - b.Y);
         public static Vector2 operator *(Vector2 a, float scalar) => new(a.X * scalar, a.Y * scalar);
+        public static Vector2 operator *(float scalar, Vector2 a) => new(a.X * scalar, a.Y * scalar);
         public static Vector2 operator /(Vector2 a, float scalar) => new(a.X / scalar, a.Y / scalar);
+        public static Vector2 operator -(Vector2 a) => new(-a.X, -a.Y);
 
-        public static implicit operator System.Numerics.Vector2(Vector2 v) => new(v.X, v.Y);
-        public static implicit operator Vector2(System.Numerics.Vector2 v) => new(v.X, v.Y);
-    }
+        // Comparison operators
+        public static bool operator ==(Vector2 a, Vector2 b) => Math.Abs(a.X - b.X) < float.Epsilon && Math.Abs(a.Y - b.Y) < float.Epsilon;
+        public static bool operator !=(Vector2 a, Vector2 b) => !(a == b);
 
-    /// <summary>
-    /// Rectangle structure
-    /// </summary>
-    public struct Rectangle
-    {
-        public float X;
-        public float Y;
-        public float Width;
-        public float Height;
+        // Properties
+        public float Length => (float)Math.Sqrt(X * X + Y * Y);
+        public float LengthSquared => X * X + Y * Y;
 
-        public Rectangle(float x, float y, float width, float height)
+        // Static properties
+        public static Vector2 Zero => new(0, 0);
+        public static Vector2 One => new(1, 1);
+        public static Vector2 UnitX => new(1, 0);
+        public static Vector2 UnitY => new(0, 1);
+
+        // Methods
+        public Vector2 Normalize()
         {
-            X = x;
-            Y = y;
-            Width = width;
-            Height = height;
+            float length = Length;
+            return length > 0 ? this / length : Zero;
         }
 
-        public float Left => X;
-        public float Right => X + Width;
-        public float Top => Y;
-        public float Bottom => Y + Height;
+        public static float Distance(Vector2 a, Vector2 b)
+        {
+            return (a - b).Length;
+        }
+
+        public static float DistanceSquared(Vector2 a, Vector2 b)
+        {
+            return (a - b).LengthSquared;
+        }
+
+        public static float Dot(Vector2 a, Vector2 b)
+        {
+            return a.X * b.X + a.Y * b.Y;
+        }
+
+        public static Vector2 Lerp(Vector2 a, Vector2 b, float t)
+        {
+            return a + (b - a) * t;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is Vector2 vector && this == vector;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(X, Y);
+        }
+
+        public override string ToString()
+        {
+            return $"Vector2({X}, {Y})";
+        }
     }
 }
