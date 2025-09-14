@@ -1144,7 +1144,7 @@ namespace SilkRay
         }
 
         // Input functions (basic)
-        public static bool IsKeyPressed(KeyboardKey key)
+        public static bool IsKeyPressed(int key)
         {
             if (RaylibInternal.Input == null) return false;
             
@@ -1153,16 +1153,11 @@ namespace SilkRay
             
             var keyboard = keyboards[0];
             
-            return key switch
-            {
-                KeyboardKey.Escape => keyboard.IsKeyPressed(Silk.NET.Input.Key.Escape),
-                KeyboardKey.Space => keyboard.IsKeyPressed(Silk.NET.Input.Key.Space),
-                KeyboardKey.Enter => keyboard.IsKeyPressed(Silk.NET.Input.Key.Enter),
-                _ => false
-            };
+            // Raylib key codes are compatible with GLFW/Silk.NET key codes
+            return keyboard.IsKeyPressed((Silk.NET.Input.Key)key);
         }
 
-        public static bool IsKeyDown(KeyboardKey key)
+        public static bool IsKeyDown(int key)
         {
             if (RaylibInternal.Input == null) return false;
             
@@ -1171,13 +1166,8 @@ namespace SilkRay
             
             var keyboard = keyboards[0];
             
-            return key switch
-            {
-                KeyboardKey.Escape => keyboard.IsKeyPressed(Silk.NET.Input.Key.Escape),
-                KeyboardKey.Space => keyboard.IsKeyPressed(Silk.NET.Input.Key.Space),
-                KeyboardKey.Enter => keyboard.IsKeyPressed(Silk.NET.Input.Key.Enter),
-                _ => false
-            };
+            // Raylib key codes are compatible with GLFW/Silk.NET key codes
+            return keyboard.IsKeyPressed((Silk.NET.Input.Key)key);
         }
 
         public static Vector2 GetMousePosition()
@@ -1842,15 +1832,6 @@ namespace SilkRay
         }
     }
 
-    // Enums for input (simplified)
-    public enum KeyboardKey
-    {
-        Space = 32,
-        Escape = 256,
-        Enter = 257,
-        // Add more keys as needed
-    }
-
     public enum MouseButton
     {
         Left = 0,
@@ -1927,5 +1908,120 @@ namespace SilkRay
         WindowHighdpi = 0x00000400,
         WindowMousePassthrough = 0x00000800,
         BorderlessWindowedMode = 0x00001000
+    }
+
+    // Global keyboard key constants (Raylib style)
+    public static class Keys
+	{
+		// Alphanumeric keys
+		public const int KEY_SPACE = 32;
+		public const int KEY_APOSTROPHE = 39;    // '
+		public const int KEY_COMMA = 44;         // ,
+		public const int KEY_MINUS = 45;         // -
+		public const int KEY_PERIOD = 46;        // .
+		public const int KEY_SLASH = 47;         // /
+		public const int KEY_ZERO = 48;
+		public const int KEY_ONE = 49;
+		public const int KEY_TWO = 50;
+		public const int KEY_THREE = 51;
+		public const int KEY_FOUR = 52;
+		public const int KEY_FIVE = 53;
+		public const int KEY_SIX = 54;
+		public const int KEY_SEVEN = 55;
+		public const int KEY_EIGHT = 56;
+		public const int KEY_NINE = 57;
+		public const int KEY_SEMICOLON = 59;     // ;
+		public const int KEY_EQUAL = 61;         // =
+		public const int KEY_A = 65;
+		public const int KEY_B = 66;
+		public const int KEY_C = 67;
+		public const int KEY_D = 68;
+		public const int KEY_E = 69;
+		public const int KEY_F = 70;
+		public const int KEY_G = 71;
+		public const int KEY_H = 72;
+		public const int KEY_I = 73;
+		public const int KEY_J = 74;
+		public const int KEY_K = 75;
+		public const int KEY_L = 76;
+		public const int KEY_M = 77;
+		public const int KEY_N = 78;
+		public const int KEY_O = 79;
+		public const int KEY_P = 80;
+		public const int KEY_Q = 81;
+		public const int KEY_R = 82;
+		public const int KEY_S = 83;
+		public const int KEY_T = 84;
+		public const int KEY_U = 85;
+		public const int KEY_V = 86;
+		public const int KEY_W = 87;
+		public const int KEY_X = 88;
+		public const int KEY_Y = 89;
+		public const int KEY_Z = 90;
+		public const int KEY_LEFT_BRACKET = 91;   // [
+		public const int KEY_BACKSLASH = 92;      // \
+		public const int KEY_RIGHT_BRACKET = 93;  // ]
+		public const int KEY_GRAVE = 96;          // `
+
+		// Function keys
+		public const int KEY_ESCAPE = 256;
+		public const int KEY_ENTER = 257;
+		public const int KEY_TAB = 258;
+		public const int KEY_BACKSPACE = 259;
+		public const int KEY_INSERT = 260;
+		public const int KEY_DELETE = 261;
+		public const int KEY_RIGHT = 262;
+		public const int KEY_LEFT = 263;
+		public const int KEY_DOWN = 264;
+		public const int KEY_UP = 265;
+		public const int KEY_PAGE_UP = 266;
+		public const int KEY_PAGE_DOWN = 267;
+		public const int KEY_HOME = 268;
+		public const int KEY_END = 269;
+		public const int KEY_CAPS_LOCK = 280;
+		public const int KEY_SCROLL_LOCK = 281;
+		public const int KEY_NUM_LOCK = 282;
+		public const int KEY_PRINT_SCREEN = 283;
+		public const int KEY_PAUSE = 284;
+		public const int KEY_F1 = 290;
+		public const int KEY_F2 = 291;
+		public const int KEY_F3 = 292;
+		public const int KEY_F4 = 293;
+		public const int KEY_F5 = 294;
+		public const int KEY_F6 = 295;
+		public const int KEY_F7 = 296;
+		public const int KEY_F8 = 297;
+		public const int KEY_F9 = 298;
+		public const int KEY_F10 = 299;
+		public const int KEY_F11 = 300;
+		public const int KEY_F12 = 301;
+		public const int KEY_LEFT_SHIFT = 340;
+		public const int KEY_LEFT_CONTROL = 341;
+		public const int KEY_LEFT_ALT = 342;
+		public const int KEY_LEFT_SUPER = 343;
+		public const int KEY_RIGHT_SHIFT = 344;
+		public const int KEY_RIGHT_CONTROL = 345;
+		public const int KEY_RIGHT_ALT = 346;
+		public const int KEY_RIGHT_SUPER = 347;
+		public const int KEY_KB_MENU = 348;
+
+		// Keypad keys
+		public const int KEY_KP_0 = 320;
+		public const int KEY_KP_1 = 321;
+		public const int KEY_KP_2 = 322;
+		public const int KEY_KP_3 = 323;
+		public const int KEY_KP_4 = 324;
+		public const int KEY_KP_5 = 325;
+		public const int KEY_KP_6 = 326;
+		public const int KEY_KP_7 = 327;
+		public const int KEY_KP_8 = 328;
+		public const int KEY_KP_9 = 329;
+		public const int KEY_KP_DECIMAL = 330;
+		public const int KEY_KP_DIVIDE = 331;
+		public const int KEY_KP_MULTIPLY = 332;
+		public const int KEY_KP_SUBTRACT = 333;
+		public const int KEY_KP_ADD = 334;
+		public const int KEY_KP_ENTER = 335;
+		public const int KEY_KP_EQUAL = 336;
     }
 }
