@@ -1,4 +1,5 @@
 global using static SilkRay.RaylibAPI;
+global using static SilkRay.Keys;
 
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -29,6 +30,13 @@ namespace SilkRay
         
         // Default bitmap font
         public static uint DefaultFontTexture = 0;
+        
+        // Keyboard input state tracking
+        public static Dictionary<int, bool> CurrentKeyState = new();
+        public static Dictionary<int, bool> PreviousKeyState = new();
+        public static Queue<int> KeyPressedQueue = new();
+        public static Queue<int> CharPressedQueue = new();
+        public static int ExitKey = Keys.KEY_ESCAPE;
     }
 
     /// <summary>
@@ -122,12 +130,29 @@ namespace SilkRay
         try
         {
             RaylibInternal.Window.DoEvents();
-            return RaylibInternal.ShouldClose || RaylibInternal.Window.IsClosing;
+            
+            // Update keyboard state for proper key press detection
+            UpdateKeyboardState();
+            
+            // Check for exit key press (Raylib behavior)
+            bool exitKeyPressed = IsKeyDown(RaylibInternal.ExitKey);
+            
+            return RaylibInternal.ShouldClose || RaylibInternal.Window.IsClosing || exitKeyPressed;
         }
         catch
         {
             return true;
         }
+        }
+
+        private static void UpdateKeyboardState()
+        {
+            // Copy current state to previous state
+            RaylibInternal.PreviousKeyState.Clear();
+            foreach (var kvp in RaylibInternal.CurrentKeyState)
+            {
+                RaylibInternal.PreviousKeyState[kvp.Key] = kvp.Value;
+            }
         }
 
         public static void CloseWindow()
@@ -1117,6 +1142,15 @@ namespace SilkRay
             RaylibInternal.Renderer = new Renderer(RaylibInternal.GL, RaylibInternal.Window.Size.X, RaylibInternal.Window.Size.Y);
             RaylibInternal.Input = RaylibInternal.Window.CreateInput();
             
+            // Set up keyboard event handlers
+            if (RaylibInternal.Input != null && RaylibInternal.Input.Keyboards.Count > 0)
+            {
+                var keyboard = RaylibInternal.Input.Keyboards[0];
+                keyboard.KeyDown += OnKeyDown;
+                keyboard.KeyUp += OnKeyUp;
+                keyboard.KeyChar += OnKeyChar;
+            }
+            
             // Initialize font system
             InitializeFontSystem();
         }
@@ -1139,25 +1173,43 @@ namespace SilkRay
         private static void OnClosing()
         {
             RaylibInternal.ShouldClose = true;
-            RaylibInternal.Renderer?.Dispose();
-            RaylibInternal.GL?.Dispose();
+        }
+
+        private static void OnKeyDown(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
+        {
+            int keyCode = (int)key;
+            
+            // Update current key state
+            RaylibInternal.CurrentKeyState[keyCode] = true;
+            
+            // Add to pressed queue if this is a new press (wasn't down in previous frame)
+            if (!RaylibInternal.PreviousKeyState.GetValueOrDefault(keyCode, false))
+            {
+                RaylibInternal.KeyPressedQueue.Enqueue(keyCode);
+            }
+        }
+
+        private static void OnKeyUp(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
+        {
+            int keyCode = (int)key;
+            RaylibInternal.CurrentKeyState[keyCode] = false;
+        }
+
+        private static void OnKeyChar(IKeyboard keyboard, char character)
+        {
+            RaylibInternal.CharPressedQueue.Enqueue((int)character);
         }
 
         // Input functions (basic)
         public static bool IsKeyPressed(int key)
         {
-            if (RaylibInternal.Input == null) return false;
-            
-            var keyboards = RaylibInternal.Input.Keyboards;
-            if (keyboards.Count == 0) return false;
-            
-            var keyboard = keyboards[0];
-            
-            // Raylib key codes are compatible with GLFW/Silk.NET key codes
-            return keyboard.IsKeyPressed((Silk.NET.Input.Key)key);
+            // Check if key was just pressed (down now, but not down in previous frame)
+            bool currentState = RaylibInternal.CurrentKeyState.GetValueOrDefault(key, false);
+            bool previousState = RaylibInternal.PreviousKeyState.GetValueOrDefault(key, false);
+            return currentState && !previousState;
         }
 
-        public static bool IsKeyDown(int key)
+        public static bool IsKeyPressedRepeat(int key)
         {
             if (RaylibInternal.Input == null) return false;
             
@@ -1166,8 +1218,53 @@ namespace SilkRay
             
             var keyboard = keyboards[0];
             
-            // Raylib key codes are compatible with GLFW/Silk.NET key codes
+            // For repeat, we check if key is currently pressed (includes initial press and repeats)
             return keyboard.IsKeyPressed((Silk.NET.Input.Key)key);
+        }
+
+        public static bool IsKeyDown(int key)
+        {
+            // Check if key is currently being held down
+            return RaylibInternal.CurrentKeyState.GetValueOrDefault(key, false);
+        }
+
+        public static bool IsKeyReleased(int key)
+        {
+            // Check if key was just released (not down now, but was down in previous frame)
+            bool currentState = RaylibInternal.CurrentKeyState.GetValueOrDefault(key, false);
+            bool previousState = RaylibInternal.PreviousKeyState.GetValueOrDefault(key, false);
+            return !currentState && previousState;
+        }
+
+        public static bool IsKeyUp(int key)
+        {
+            // Check if key is NOT being pressed
+            return !RaylibInternal.CurrentKeyState.GetValueOrDefault(key, false);
+        }
+
+        public static int GetKeyPressed()
+        {
+            // Get key pressed from queue, return 0 if queue is empty
+            if (RaylibInternal.KeyPressedQueue.Count > 0)
+            {
+                return RaylibInternal.KeyPressedQueue.Dequeue();
+            }
+            return 0;
+        }
+
+        public static int GetCharPressed()
+        {
+            // Get character pressed from queue, return 0 if queue is empty
+            if (RaylibInternal.CharPressedQueue.Count > 0)
+            {
+                return RaylibInternal.CharPressedQueue.Dequeue();
+            }
+            return 0;
+        }
+
+        public static void SetExitKey(int key)
+        {
+            RaylibInternal.ExitKey = key;
         }
 
         public static Vector2 GetMousePosition()
