@@ -15,6 +15,7 @@ namespace SilkRay
         public static Renderer? Renderer;
         public static IInputContext? Input;
         public static bool ShouldClose;
+        public static ConfigFlags CurrentConfigFlags;
     }
 
     /// <summary>
@@ -25,12 +26,52 @@ namespace SilkRay
         // Window-related functions (rcore)
         public static void InitWindow(int width, int height, string title)
         {
+            // Clean up any existing window first
+            if (RaylibInternal.Window != null)
+            {
+                CloseWindow();
+            }
+            
             var options = WindowOptions.Default;
-            options.Size = new Silk.NET.Maths.Vector2D<int>(width, height);
+            
+            // Handle special cases for fullscreen modes
+            if (RaylibInternal.CurrentConfigFlags.HasFlag(ConfigFlags.BorderlessWindowedMode) ||
+                RaylibInternal.CurrentConfigFlags.HasFlag(ConfigFlags.FullscreenMode))
+            {
+                // For fullscreen modes, use default size if width/height are 0
+                if (width <= 0 || height <= 0)
+                {
+                    options.Size = new Silk.NET.Maths.Vector2D<int>(1920, 1080); // Default fullscreen size
+                }
+                else
+                {
+                    options.Size = new Silk.NET.Maths.Vector2D<int>(width, height);
+                }
+            }
+            else
+            {
+                // For windowed modes, ensure minimum size
+                options.Size = new Silk.NET.Maths.Vector2D<int>(Math.Max(width, 1), Math.Max(height, 1));
+            }
+            
             options.Title = title;
             options.VSync = true;
             options.UpdatesPerSecond = 60;
             options.FramesPerSecond = 60;
+            
+            // Ensure we have a proper OpenGL context
+            options.API = new GraphicsAPI(
+                ContextAPI.OpenGL,
+                ContextProfile.Core,
+                ContextFlags.Default,
+                new APIVersion(3, 3)
+            );
+
+            // Apply config flags if they were set before InitWindow
+            if (RaylibInternal.CurrentConfigFlags != 0)
+            {
+                options = ApplyConfigFlagsToWindowOptions(options, RaylibInternal.CurrentConfigFlags);
+            }
 
             RaylibInternal.Window = Window.Create(options);
             
@@ -40,18 +81,13 @@ namespace SilkRay
             RaylibInternal.Window.Resize += OnResize;
             RaylibInternal.Window.Closing += OnClosing;
             
-            // Initialize the window immediately for traditional loop usage
+            // Don't initialize immediately - let the window initialize properly through events
             RaylibInternal.Window.Initialize();
-            
-            if (RaylibInternal.Window.IsInitialized)
-            {
-                OnLoad();
-            }
         }
 
-    public static bool WindowShouldClose()
-    {
-        if (RaylibInternal.Window == null || !RaylibInternal.Window.IsInitialized) return true;
+        public static bool WindowShouldClose()
+        {
+            if (RaylibInternal.Window == null || !RaylibInternal.Window.IsInitialized) return true;
         
         // Process window events to keep window responsive
         try
@@ -68,7 +104,27 @@ namespace SilkRay
         public static void CloseWindow()
         {
             RaylibInternal.ShouldClose = true;
-            RaylibInternal.Window?.Close();
+
+            // Reset renderer state
+            RaylibInternal.Renderer?.Dispose();
+            RaylibInternal.Renderer = null;
+            
+            if (RaylibInternal.Window != null)
+            {
+                // Unsubscribe from events to prevent ObjectDisposedException
+                RaylibInternal.Window.Load -= OnLoad;
+                RaylibInternal.Window.Update -= OnUpdate;
+                RaylibInternal.Window.Render -= OnRender;
+                RaylibInternal.Window.Resize -= OnResize;
+                RaylibInternal.Window.Closing -= OnClosing;
+                
+                RaylibInternal.Window.Close();
+                RaylibInternal.Window.Dispose();
+                RaylibInternal.Window = null;
+            }
+            
+            // Reset flags for next window
+            RaylibInternal.ShouldClose = false;
         }
 
         public static void SetTargetFPS(int fps)
@@ -145,6 +201,30 @@ namespace SilkRay
         public static void ClearWindowState(uint flags)
         {
             // Clear window state flags - placeholder
+        }
+        
+        public static void ClearWindowState(WindowStateFlags flags)
+        {
+            // Clear specific window state flags
+            if (RaylibInternal.Window == null) return;
+            
+            if (flags.HasFlag(WindowStateFlags.FullscreenMode))
+            {
+                if (RaylibInternal.Window.WindowState == WindowState.Fullscreen)
+                    RaylibInternal.Window.WindowState = WindowState.Normal;
+            }
+            
+            if (flags.HasFlag(WindowStateFlags.WindowMaximized))
+            {
+                if (RaylibInternal.Window.WindowState == WindowState.Maximized)
+                    RaylibInternal.Window.WindowState = WindowState.Normal;
+            }
+            
+            if (flags.HasFlag(WindowStateFlags.WindowMinimized))
+            {
+                if (RaylibInternal.Window.WindowState == WindowState.Minimized)
+                    RaylibInternal.Window.WindowState = WindowState.Normal;
+            }
         }
 
         public static void ToggleFullscreen()
@@ -297,10 +377,174 @@ namespace SilkRay
         }
 
         // Window flags and configuration
+        public static void SetConfigFlags(ConfigFlags flags)
+        {
+            RaylibInternal.CurrentConfigFlags = flags;
+            
+            // If window is already created, apply flags that can be changed at runtime
+            if (RaylibInternal.Window != null)
+            {
+                ApplyRuntimeConfigFlags(flags);
+            }
+        }
+        
         public static void SetConfigFlags(uint flags)
         {
-            // Configuration flags - would need to be set before InitWindow
-            // Placeholder for API compatibility
+            SetConfigFlags((ConfigFlags)flags);
+        }
+        
+        private static void ApplyRuntimeConfigFlags(ConfigFlags flags)
+        {
+            if (RaylibInternal.Window == null) return;
+            
+            // Apply window state flags that can be changed at runtime
+            if (flags.HasFlag(ConfigFlags.WindowResizable))
+            {
+                // Silk.NET doesn't have direct resizable control after creation
+                // This would need to be set during window creation
+            }
+            
+            if (flags.HasFlag(ConfigFlags.WindowTopmost))
+            {
+                // Platform-specific implementation needed
+                // Windows: SetWindowPos with HWND_TOPMOST
+                // Linux: X11 _NET_WM_STATE_ABOVE
+                // macOS: NSWindow level
+            }
+            
+            if (flags.HasFlag(ConfigFlags.WindowMaximized))
+            {
+                RaylibInternal.Window.WindowState = WindowState.Maximized;
+            }
+            else if (flags.HasFlag(ConfigFlags.WindowMinimized))
+            {
+                RaylibInternal.Window.WindowState = WindowState.Minimized;
+            }
+            else if (flags.HasFlag(ConfigFlags.FullscreenMode))
+            {
+                RaylibInternal.Window.WindowState = WindowState.Fullscreen;
+            }
+            else
+            {
+                RaylibInternal.Window.WindowState = WindowState.Normal;
+            }
+            
+            if (flags.HasFlag(ConfigFlags.WindowHidden))
+            {
+                RaylibInternal.Window.IsVisible = false;
+            }
+            else
+            {
+                RaylibInternal.Window.IsVisible = true;
+            }
+        }
+        
+        private static WindowOptions ApplyConfigFlagsToWindowOptions(WindowOptions options, ConfigFlags flags)
+        {
+            // Apply window creation flags
+            if (flags.HasFlag(ConfigFlags.WindowResizable))
+            {
+                options.WindowBorder = WindowBorder.Resizable;
+            }
+            else
+            {
+                options.WindowBorder = WindowBorder.Fixed;
+            }
+            
+            if (flags.HasFlag(ConfigFlags.WindowUndecorated))
+            {
+                options.WindowBorder = WindowBorder.Hidden;
+            }
+            
+            if (flags.HasFlag(ConfigFlags.BorderlessWindowedMode))
+            {
+                // Borderless windowed mode: fullscreen window without decorations
+                options.WindowState = WindowState.Fullscreen;
+                options.WindowBorder = WindowBorder.Hidden;
+            }
+            else if (flags.HasFlag(ConfigFlags.FullscreenMode))
+            {
+                options.WindowState = WindowState.Fullscreen;
+            }
+            else if (flags.HasFlag(ConfigFlags.WindowMaximized))
+            {
+                options.WindowState = WindowState.Maximized;
+            }
+            else if (flags.HasFlag(ConfigFlags.WindowMinimized))
+            {
+                options.WindowState = WindowState.Minimized;
+            }
+            else
+            {
+                options.WindowState = WindowState.Normal;
+            }
+            
+            if (flags.HasFlag(ConfigFlags.WindowHidden))
+            {
+                options.IsVisible = false;
+            }
+            
+            if (flags.HasFlag(ConfigFlags.VsyncHint))
+            {
+                options.VSync = true;
+            }
+            
+            if (flags.HasFlag(ConfigFlags.WindowTransparent))
+            {
+                options.TransparentFramebuffer = true;
+            }
+            
+            // OpenGL context flags
+            if (flags.HasFlag(ConfigFlags.OpenglCoreProfile))
+            {
+                options.API = new GraphicsAPI(
+                    ContextAPI.OpenGL,
+                    ContextProfile.Core,
+                    ContextFlags.Default,
+                    new APIVersion(3, 3)
+                );
+            }
+            else if (flags.HasFlag(ConfigFlags.OpenglCompatProfile))
+            {
+                options.API = new GraphicsAPI(
+                    ContextAPI.OpenGL,
+                    ContextProfile.Compatability,
+                    ContextFlags.Default,
+                    new APIVersion(3, 3)
+                );
+            }
+            
+            if (flags.HasFlag(ConfigFlags.OpenglDebugContext))
+            {
+                options.API = new GraphicsAPI(
+                    ContextAPI.OpenGL,
+                    ContextProfile.Core,
+                    ContextFlags.Debug,
+                    new APIVersion(3, 3)
+                );
+            }
+            
+            if (flags.HasFlag(ConfigFlags.OpenglForwardCompat))
+            {
+                var currentFlags = ContextFlags.Default;
+                if (flags.HasFlag(ConfigFlags.OpenglDebugContext))
+                    currentFlags |= ContextFlags.Debug;
+                
+                options.API = new GraphicsAPI(
+                    ContextAPI.OpenGL,
+                    ContextProfile.Core,
+                    currentFlags | ContextFlags.ForwardCompatible,
+                    new APIVersion(3, 3)
+                );
+            }
+            
+            // MSAA
+            if (flags.HasFlag(ConfigFlags.Msaa4xHint))
+            {
+                options.Samples = 4;
+            }
+            
+            return options;
         }
 
         public static void SetWindowOpacity(float opacity)
@@ -312,6 +556,35 @@ namespace SilkRay
         public static void SetWindowFocused()
         {
             // Focus window - would need platform-specific implementation
+        }
+        
+        // Additional window flag utility functions
+        public static bool IsConfigFlagEnabled(ConfigFlags flag)
+        {
+            return RaylibInternal.CurrentConfigFlags.HasFlag(flag);
+        }
+        
+        public static void EnableConfigFlag(ConfigFlags flag)
+        {
+            RaylibInternal.CurrentConfigFlags |= flag;
+            if (RaylibInternal.Window != null)
+            {
+                ApplyRuntimeConfigFlags(RaylibInternal.CurrentConfigFlags);
+            }
+        }
+        
+        public static void DisableConfigFlag(ConfigFlags flag)
+        {
+            RaylibInternal.CurrentConfigFlags &= ~flag;
+            if (RaylibInternal.Window != null)
+            {
+                ApplyRuntimeConfigFlags(RaylibInternal.CurrentConfigFlags);
+            }
+        }
+        
+        public static ConfigFlags GetConfigFlags()
+        {
+            return RaylibInternal.CurrentConfigFlags;
         }
 
         // Cursor functions
@@ -518,6 +791,7 @@ namespace SilkRay
 
         private static void OnClosing()
         {
+            RaylibInternal.ShouldClose = true;
             RaylibInternal.Renderer?.Dispose();
             RaylibInternal.GL?.Dispose();
         }
@@ -525,14 +799,38 @@ namespace SilkRay
         // Input functions (basic)
         public static bool IsKeyPressed(KeyboardKey key)
         {
-            // This would need proper key mapping and state tracking
-            return false; // Placeholder
+            if (RaylibInternal.Input == null) return false;
+            
+            var keyboards = RaylibInternal.Input.Keyboards;
+            if (keyboards.Count == 0) return false;
+            
+            var keyboard = keyboards[0];
+            
+            return key switch
+            {
+                KeyboardKey.Escape => keyboard.IsKeyPressed(Silk.NET.Input.Key.Escape),
+                KeyboardKey.Space => keyboard.IsKeyPressed(Silk.NET.Input.Key.Space),
+                KeyboardKey.Enter => keyboard.IsKeyPressed(Silk.NET.Input.Key.Enter),
+                _ => false
+            };
         }
 
         public static bool IsKeyDown(KeyboardKey key)
         {
-            // This would need proper key mapping and state tracking
-            return false; // Placeholder
+            if (RaylibInternal.Input == null) return false;
+            
+            var keyboards = RaylibInternal.Input.Keyboards;
+            if (keyboards.Count == 0) return false;
+            
+            var keyboard = keyboards[0];
+            
+            return key switch
+            {
+                KeyboardKey.Escape => keyboard.IsKeyPressed(Silk.NET.Input.Key.Escape),
+                KeyboardKey.Space => keyboard.IsKeyPressed(Silk.NET.Input.Key.Space),
+                KeyboardKey.Enter => keyboard.IsKeyPressed(Silk.NET.Input.Key.Enter),
+                _ => false
+            };
         }
 
         public static Vector2 GetMousePosition()
@@ -598,26 +896,56 @@ namespace SilkRay
         Middle = 2
     }
 
-    // Window configuration flags
+    // Window configuration flags - Complete Raylib ConfigFlags implementation
     [Flags]
     public enum ConfigFlags : uint
     {
-        VsyncHint = 0x00000040,
-        FullscreenMode = 0x00000002,
-        WindowResizable = 0x00000004,
-        WindowUndecorated = 0x00000008,
-        WindowHidden = 0x00000080,
-        WindowMinimized = 0x00000200,
-        WindowMaximized = 0x00000400,
-        WindowUnfocused = 0x00000800,
-        WindowTopmost = 0x00001000,
-        WindowAlwaysRun = 0x00000100,
-        WindowTransparent = 0x00000010,
-        WindowHighdpi = 0x00002000,
-        WindowMousePassthrough = 0x00004000,
-        BorderlessWindowedMode = 0x00008000,
-        Msaa4xHint = 0x00000020,
-        InterlacedHint = 0x00010000
+        // Window-related flags
+        VsyncHint = 0x00000040,           // Set to try enabling V-Sync on GPU
+        FullscreenMode = 0x00000002,      // Set to run program in fullscreen
+        WindowResizable = 0x00000004,     // Set to allow resizable window
+        WindowUndecorated = 0x00000008,   // Set to disable window decoration (frame and buttons)
+        WindowHidden = 0x00000080,        // Set to hide window
+        WindowMinimized = 0x00000200,     // Set to minimize window (iconify)
+        WindowMaximized = 0x00000400,     // Set to maximize window (expanded to monitor)
+        WindowUnfocused = 0x00000800,     // Set to window non focused
+        WindowTopmost = 0x00001000,       // Set to window always on top
+        WindowAlwaysRun = 0x00000100,     // Set to allow windows running while minimized
+        WindowTransparent = 0x00000010,   // Set to allow transparent framebuffer
+        WindowHighdpi = 0x00002000,       // Set to support HighDPI
+        WindowMousePassthrough = 0x00004000, // Set to support mouse passthrough, only supported when FLAG_WINDOW_UNDECORATED
+        BorderlessWindowedMode = 0x00008000, // Set to run program in borderless windowed mode
+        
+        // Graphics-related flags
+        Msaa4xHint = 0x00000020,          // Set to try enabling MSAA 4X
+        InterlacedHint = 0x00010000,      // Set to try enabling interlaced video format (for V3D)
+        
+        // Additional Raylib flags
+        WindowScaledMode = 0x00020000,    // Set to try enabling window scaling mode
+        WindowCentered = 0x00040000,      // Set to center window on screen
+        WindowAlwaysOnTop = WindowTopmost, // Alias for WindowTopmost
+        
+        // OpenGL context flags
+        OpenglDebugContext = 0x00080000,  // Set to enable OpenGL debug context
+        OpenglForwardCompat = 0x00100000, // Set to enable OpenGL forward compatibility
+        OpenglCoreProfile = 0x00200000,   // Set to use OpenGL core profile
+        OpenglCompatProfile = 0x00400000, // Set to use OpenGL compatibility profile
+        
+        // Audio flags
+        AudioDeviceShared = 0x00800000,   // Set to use shared audio device
+        
+        // Display flags
+        DisplayAutoRotation = 0x01000000, // Set to enable display auto-rotation (mobile platforms)
+        
+        // Input flags
+        InputMouseCaptured = 0x02000000,  // Set to capture mouse input
+        InputKeyboardCaptured = 0x04000000, // Set to capture keyboard input
+        
+        // Platform-specific flags
+        PlatformDesktop = 0x08000000,     // Set platform to desktop
+        PlatformAndroid = 0x10000000,     // Set platform to Android
+        PlatformWeb = 0x20000000,         // Set platform to Web
+        PlatformDrm = 0x40000000          // Set platform to DRM
     }
 
     // Window state flags
