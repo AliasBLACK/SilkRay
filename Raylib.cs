@@ -3,7 +3,7 @@ global using static SilkRay.RaylibAPI;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 using Silk.NET.Input;
-using System;
+using TextCopy;
 
 namespace SilkRay
 {
@@ -307,13 +307,27 @@ namespace SilkRay
 
         public static void SetClipboardText(string text)
         {
-            // Clipboard operations - would need platform-specific implementation
+            try
+            {
+                ClipboardService.SetText(text);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error setting clipboard text: {ex.Message}");
+            }
         }
 
         public static string GetClipboardText()
         {
-            // Clipboard operations - placeholder
-            return string.Empty;
+            try
+            {
+                return ClipboardService.GetText() ?? string.Empty;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting clipboard text: {ex.Message}");
+                return string.Empty;
+            }
         }
 
         // Window configuration functions
