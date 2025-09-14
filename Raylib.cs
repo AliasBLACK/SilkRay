@@ -1251,6 +1251,44 @@ namespace SilkRay
             }
         }
 
+        public static bool IsTextureValid(Texture2D texture)
+        {
+            if (RaylibInternal.GL == null || texture.Id == 0)
+                return false;
+
+            // Check if the texture ID is valid in OpenGL
+            return RaylibInternal.GL.IsTexture(texture.Id);
+        }
+
+        public static void UpdateTexture(Texture2D texture, byte[] pixels)
+        {
+            if (RaylibInternal.GL == null || texture.Id == 0 || pixels == null)
+                return;
+
+            try
+            {
+                // Bind the texture
+                RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, texture.Id);
+
+                // Update texture data
+                unsafe
+                {
+                    fixed (byte* ptr = pixels)
+                    {
+                        RaylibInternal.GL.TexSubImage2D(TextureTarget.Texture2D, 0, 0, 0,
+                            (uint)texture.Width, (uint)texture.Height, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
+                    }
+                }
+
+                // Unbind texture
+                RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, 0);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating texture: {ex.Message}");
+            }
+        }
+
         public static void DrawTexture(Texture2D texture, int posX, int posY, Color tint)
         {
             DrawTextureEx(texture, new Vector2(posX, posY), 0.0f, 1.0f, tint);
