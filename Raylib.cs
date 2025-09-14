@@ -159,10 +159,21 @@ namespace SilkRay
         {
             RaylibInternal.ShouldClose = true;
 
-            // Reset renderer state
+            // Dispose resources in proper order: Renderer -> GL Context -> Input -> Window
+            
+            // 1. Dispose renderer first (uses GL context)
             RaylibInternal.Renderer?.Dispose();
             RaylibInternal.Renderer = null;
             
+            // 2. Dispose GL context
+            RaylibInternal.GL?.Dispose();
+            RaylibInternal.GL = null;
+            
+            // 3. Dispose input context
+            RaylibInternal.Input?.Dispose();
+            RaylibInternal.Input = null;
+            
+            // 4. Finally dispose window
             if (RaylibInternal.Window != null)
             {
                 // Unsubscribe from events to prevent ObjectDisposedException
@@ -176,6 +187,12 @@ namespace SilkRay
                 RaylibInternal.Window.Dispose();
                 RaylibInternal.Window = null;
             }
+            
+            // Reset keyboard state
+            RaylibInternal.CurrentKeyState.Clear();
+            RaylibInternal.PreviousKeyState.Clear();
+            RaylibInternal.KeyPressedQueue.Clear();
+            RaylibInternal.CharPressedQueue.Clear();
             
             // Reset flags for next window
             RaylibInternal.ShouldClose = false;
