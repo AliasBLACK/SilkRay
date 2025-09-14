@@ -2,6 +2,7 @@ global using static SilkRay.RaylibAPI;
 
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
+using Silk.NET.GLFW;
 using Silk.NET.Input;
 using TextCopy;
 
@@ -16,6 +17,7 @@ namespace SilkRay
         public static IInputContext? Input;
         public static bool ShouldClose;
         public static ConfigFlags CurrentConfigFlags;
+        public static bool GlfwInitialized = false;
     }
 
     /// <summary>
@@ -23,6 +25,22 @@ namespace SilkRay
     /// </summary>
     public static class RaylibAPI
     {
+        // Helper function to ensure GLFW is initialized
+        private static unsafe void EnsureGlfwInitialized()
+        {
+            if (!RaylibInternal.GlfwInitialized)
+            {
+                var glfw = Glfw.GetApi();
+                if (glfw.Init())
+                {
+                    RaylibInternal.GlfwInitialized = true;
+                }
+                else
+                {
+                    throw new Exception("Failed to initialize GLFW");
+                }
+            }
+        }
         // Window-related functions (rcore)
         public static void InitWindow(int width, int height, string title)
         {
@@ -301,8 +319,27 @@ namespace SilkRay
 
         public static string GetMonitorName(int monitor)
         {
-            // Monitor enumeration - placeholder
-            return "Primary Monitor";
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    var monitors = glfw.GetMonitors(out int count);
+                    
+                    if (monitor >= 0 && monitor < count)
+                    {
+                        var name = glfw.GetMonitorName(monitors[monitor]);
+                        return name ?? $"Monitor {monitor + 1}";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting monitor name: {ex.Message}");
+            }
+            
+            return monitor == 0 ? "Primary Monitor" : $"Monitor {monitor + 1}";
         }
 
         public static void SetClipboardText(string text)
@@ -344,50 +381,225 @@ namespace SilkRay
         // Monitor and display functions
         public static int GetMonitorCount()
         {
-            // Monitor enumeration - would need platform-specific implementation
-            return 1; // Assume single monitor for now
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    glfw.GetMonitors(out int count);
+                    return count;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting monitor count: {ex.Message}");
+                return 1;
+            }
         }
 
         public static int GetCurrentMonitor()
         {
-            // Current monitor detection - placeholder
-            return 0;
+            if (RaylibInternal.Window == null) return 0;
+            
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    var monitors = glfw.GetMonitors(out int count);
+                    
+                    // Get window position and size
+                    var windowPos = RaylibInternal.Window.Position;
+                    var windowSize = RaylibInternal.Window.Size;
+                    var windowCenterX = windowPos.X + windowSize.X / 2;
+                    var windowCenterY = windowPos.Y + windowSize.Y / 2;
+                    
+                    for (int i = 0; i < count; i++)
+                    {
+                        glfw.GetMonitorPos(monitors[i], out int x, out int y);
+                        var videoMode = glfw.GetVideoMode(monitors[i]);
+                        
+                        if (videoMode != null)
+                        {
+                            int width = videoMode->Width;
+                            int height = videoMode->Height;
+                            
+                            if (windowCenterX >= x && windowCenterX < x + width &&
+                                windowCenterY >= y && windowCenterY < y + height)
+                            {
+                                return i;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting current monitor: {ex.Message}");
+            }
+            
+            return 0; // Default to primary monitor
         }
 
         public static Vector2 GetMonitorPosition(int monitor)
         {
-            // Monitor position - placeholder
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    var monitors = glfw.GetMonitors(out int count);
+                    
+                    if (monitor >= 0 && monitor < count)
+                    {
+                        glfw.GetMonitorPos(monitors[monitor], out int x, out int y);
+                        return new Vector2(x, y);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting monitor position: {ex.Message}");
+            }
+            
             return Vector2.Zero;
         }
 
         public static int GetMonitorWidth(int monitor)
         {
-            // Monitor width - would need platform-specific implementation
-            return 1920; // Default assumption
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    var monitors = glfw.GetMonitors(out int count);
+                    
+                    if (monitor >= 0 && monitor < count)
+                    {
+                        var videoMode = glfw.GetVideoMode(monitors[monitor]);
+                        if (videoMode != null)
+                        {
+                            return videoMode->Width;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting monitor width: {ex.Message}");
+            }
+            
+            return 1920; // Default fallback
         }
 
         public static int GetMonitorHeight(int monitor)
         {
-            // Monitor height - would need platform-specific implementation
-            return 1080; // Default assumption
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    var monitors = glfw.GetMonitors(out int count);
+                    
+                    if (monitor >= 0 && monitor < count)
+                    {
+                        var videoMode = glfw.GetVideoMode(monitors[monitor]);
+                        if (videoMode != null)
+                        {
+                            return videoMode->Height;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting monitor height: {ex.Message}");
+            }
+            
+            return 1080; // Default fallback
         }
 
         public static int GetMonitorPhysicalWidth(int monitor)
         {
-            // Physical monitor width in millimeters - placeholder
-            return 510; // ~24 inch monitor assumption
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    var monitors = glfw.GetMonitors(out int count);
+                    
+                    if (monitor >= 0 && monitor < count)
+                    {
+                        glfw.GetMonitorPhysicalSize(monitors[monitor], out int width, out int height);
+                        return width;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting monitor physical width: {ex.Message}");
+            }
+            
+            return 510; // Default ~24 inch monitor assumption
         }
 
         public static int GetMonitorPhysicalHeight(int monitor)
         {
-            // Physical monitor height in millimeters - placeholder
-            return 287; // ~24 inch monitor assumption
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    var monitors = glfw.GetMonitors(out int count);
+                    
+                    if (monitor >= 0 && monitor < count)
+                    {
+                        glfw.GetMonitorPhysicalSize(monitors[monitor], out int width, out int height);
+                        return height;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting monitor physical height: {ex.Message}");
+            }
+            
+            return 287; // Default ~24 inch monitor assumption
         }
 
         public static int GetMonitorRefreshRate(int monitor)
         {
-            // Monitor refresh rate - placeholder
-            return 60;
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    var monitors = glfw.GetMonitors(out int count);
+                    
+                    if (monitor >= 0 && monitor < count)
+                    {
+                        var videoMode = glfw.GetVideoMode(monitors[monitor]);
+                        if (videoMode != null)
+                        {
+                            return videoMode->RefreshRate;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting monitor refresh rate: {ex.Message}");
+            }
+            
+            return 60; // Default fallback
         }
 
         // Window flags and configuration
