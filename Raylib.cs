@@ -816,40 +816,147 @@ namespace SilkRay
         // Cursor functions
         public static void ShowCursor()
         {
-            if (RaylibInternal.Window != null)
+            try
             {
-                // Silk.NET cursor visibility - may need input context
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    
+                    if (RaylibInternal.Window?.Native?.Glfw is { } glfwHandle)
+                    {
+                        var windowHandle = (WindowHandle*)glfwHandle!;
+                        glfw.SetInputMode(windowHandle, CursorStateAttribute.Cursor, CursorModeValue.CursorNormal);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error showing cursor: {ex.Message}");
             }
         }
 
         public static void HideCursor()
         {
-            if (RaylibInternal.Window != null)
+            try
             {
-                // Silk.NET cursor visibility - may need input context
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    
+                    if (RaylibInternal.Window?.Native?.Glfw is { } glfwHandle)
+                    {
+                        var windowHandle = (WindowHandle*)glfwHandle!;
+                        glfw.SetInputMode(windowHandle, CursorStateAttribute.Cursor, CursorModeValue.CursorHidden);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error hiding cursor: {ex.Message}");
             }
         }
 
         public static bool IsCursorHidden()
         {
-            // Cursor visibility state - placeholder
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    
+                    if (RaylibInternal.Window?.Native?.Glfw is { } glfwHandle)
+                    {
+                        var windowHandle = (WindowHandle*)glfwHandle!;
+                        var cursorMode = glfw.GetInputMode(windowHandle, CursorStateAttribute.Cursor);
+                        return cursorMode == (int)CursorModeValue.CursorHidden || cursorMode == (int)CursorModeValue.CursorDisabled;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking cursor visibility: {ex.Message}");
+            }
+            
             return false;
         }
 
         public static void EnableCursor()
         {
-            ShowCursor();
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    
+                    if (RaylibInternal.Window?.Native?.Glfw is { } glfwHandle)
+                    {
+                        var windowHandle = (WindowHandle*)glfwHandle!;
+                        glfw.SetInputMode(windowHandle, CursorStateAttribute.Cursor, CursorModeValue.CursorNormal);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error enabling cursor: {ex.Message}");
+            }
         }
 
         public static void DisableCursor()
         {
-            HideCursor();
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    
+                    if (RaylibInternal.Window?.Native?.Glfw is { } glfwHandle)
+                    {
+                        var windowHandle = (WindowHandle*)glfwHandle!;
+                        glfw.SetInputMode(windowHandle, CursorStateAttribute.Cursor, CursorModeValue.CursorDisabled);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error disabling cursor: {ex.Message}");
+            }
         }
 
         public static bool IsCursorOnScreen()
         {
-            // Cursor position detection - placeholder
-            return true;
+            try
+            {
+                unsafe
+                {
+                    EnsureGlfwInitialized();
+                    var glfw = Glfw.GetApi();
+                    
+                    if (RaylibInternal.Window?.Native?.Glfw is { } glfwHandle)
+                    {
+                        var windowHandle = (WindowHandle*)glfwHandle!;
+                        
+                        // Get cursor position
+                        glfw.GetCursorPos(windowHandle, out double xpos, out double ypos);
+                        
+                        // Get window size
+                        glfw.GetWindowSize(windowHandle, out int width, out int height);
+                        
+                        // Check if cursor is within window bounds
+                        return xpos >= 0 && xpos < width && ypos >= 0 && ypos < height;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking cursor position: {ex.Message}");
+            }
+            
+            return false;
         }
 
         // Drawing-related functions (rcore)
