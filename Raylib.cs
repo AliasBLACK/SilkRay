@@ -5,6 +5,7 @@ using Silk.NET.Windowing;
 using Silk.NET.GLFW;
 using Silk.NET.Input;
 using TextCopy;
+using StbImageSharp;
 
 namespace SilkRay
 {
@@ -1195,6 +1196,90 @@ namespace SilkRay
             };
         }
 
+        // Texture functions
+        public static Texture2D LoadTexture(string fileName)
+        {
+            try
+            {
+                if (RaylibInternal.GL == null)
+                    throw new InvalidOperationException("OpenGL context not initialized");
+
+                // Load image data using StbImageSharp
+                byte[] fileData = File.ReadAllBytes(fileName);
+                ImageResult image = ImageResult.FromMemory(fileData, ColorComponents.RedGreenBlueAlpha);
+                
+                int width = image.Width;
+                int height = image.Height;
+                byte[] imageData = image.Data;
+
+                // Generate OpenGL texture
+                uint textureId = RaylibInternal.GL.GenTexture();
+                RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, textureId);
+
+                // Upload texture data
+                unsafe
+                {
+                    fixed (byte* ptr = imageData)
+                    {
+                        RaylibInternal.GL.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba,
+                            (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
+                    }
+                }
+
+                // Set texture parameters
+                RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Linear);
+                RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
+                RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)GLEnum.ClampToEdge);
+                RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)GLEnum.ClampToEdge);
+
+                RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, 0);
+
+                return new Texture2D(textureId, width, height, 1, 1);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading texture '{fileName}': {ex.Message}");
+                return new Texture2D(0, 0, 0, 0, 0);
+            }
+        }
+
+        public static void UnloadTexture(Texture2D texture)
+        {
+            if (RaylibInternal.GL != null && texture.Id != 0)
+            {
+                RaylibInternal.GL.DeleteTexture(texture.Id);
+            }
+        }
+
+        public static void DrawTexture(Texture2D texture, int posX, int posY, Color tint)
+        {
+            DrawTextureEx(texture, new Vector2(posX, posY), 0.0f, 1.0f, tint);
+        }
+
+        public static void DrawTextureV(Texture2D texture, Vector2 position, Color tint)
+        {
+            DrawTextureEx(texture, position, 0.0f, 1.0f, tint);
+        }
+
+        public static void DrawTextureEx(Texture2D texture, Vector2 position, float rotation, float scale, Color tint)
+        {
+            if (RaylibInternal.Renderer == null || texture.Id == 0) return;
+
+            // Calculate texture rectangle
+            Rectangle sourceRec = new Rectangle(0, 0, texture.Width, texture.Height);
+            Rectangle destRec = new Rectangle(position.X, position.Y, texture.Width * scale, texture.Height * scale);
+            Vector2 origin = new Vector2(0, 0);
+
+            DrawTexturePro(texture, sourceRec, destRec, origin, rotation, tint);
+        }
+
+        public static void DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint)
+        {
+            if (RaylibInternal.Renderer == null || texture.Id == 0) return;
+
+            RaylibInternal.Renderer.DrawTexture(texture, source, dest, origin, rotation, tint);
+        }
+
         // Text rendering functions (placeholder)
         public static void DrawText(string text, int posX, int posY, int fontSize, Color color)
         {
@@ -1223,6 +1308,24 @@ namespace SilkRay
         public Image(byte[] data, int width, int height, int mipmaps = 1, int format = 1)
         {
             Data = data;
+            Width = width;
+            Height = height;
+            Mipmaps = mipmaps;
+            Format = format;
+        }
+    }
+
+    public struct Texture2D
+    {
+        public uint Id;          // OpenGL texture id
+        public int Width;        // Texture base width
+        public int Height;       // Texture base height
+        public int Mipmaps;      // Mipmap levels, 1 by default
+        public int Format;       // Data format (PixelFormat type)
+
+        public Texture2D(uint id, int width, int height, int mipmaps = 1, int format = 1)
+        {
+            Id = id;
             Width = width;
             Height = height;
             Mipmaps = mipmaps;

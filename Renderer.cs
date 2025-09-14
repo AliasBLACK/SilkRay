@@ -11,8 +11,11 @@ namespace SilkRay
     {
         private readonly GL _gl;
         private Shader? _shader;
+        private Shader? _textureShader;
         private uint _vao;
         private uint _vbo;
+        private uint _textureVao;
+        private uint _textureVbo;
         private Vector2 _screenSize;
         private bool _disposed;
 
@@ -48,7 +51,32 @@ namespace SilkRay
 
                 _shader = new Shader(_gl, vertexShader, fragmentShader);
 
-                // Set up vertex array and buffer objects
+                // Create texture shader
+                const string textureVertexShader = @"#version 330 core
+                    layout (location = 0) in vec2 aPosition;
+                    layout (location = 1) in vec2 aTexCoord;
+                    uniform vec2 screenSize;
+                    out vec2 TexCoord;
+                    void main()
+                    {
+                        vec2 pos = aPosition / screenSize;
+                        gl_Position = vec4(pos.x * 2.0 - 1.0, 1.0 - pos.y * 2.0, 0.0, 1.0);
+                        TexCoord = aTexCoord;
+                    }";
+                    
+                const string textureFragmentShader = @"#version 330 core
+                    out vec4 FragColor;
+                    in vec2 TexCoord;
+                    uniform sampler2D ourTexture;
+                    uniform vec4 tintColor;
+                    void main()
+                    {
+                        FragColor = texture(ourTexture, TexCoord) * tintColor;
+                    }";
+
+                _textureShader = new Shader(_gl, textureVertexShader, textureFragmentShader);
+
+                // Set up vertex array and buffer objects for shapes
                 _vao = _gl.GenVertexArray();
                 _vbo = _gl.GenBuffer();
                 
@@ -58,6 +86,19 @@ namespace SilkRay
                 // Set up vertex attribute pointer
                 _gl.EnableVertexAttribArray(0);
                 _gl.VertexAttribPointer(0, 2, GLEnum.Float, false, 2 * sizeof(float), (void*)0);
+                
+                // Set up texture vertex array and buffer objects
+                _textureVao = _gl.GenVertexArray();
+                _textureVbo = _gl.GenBuffer();
+                
+                _gl.BindVertexArray(_textureVao);
+                _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _textureVbo);
+                
+                // Set up vertex attribute pointers for texture rendering (position + texcoord)
+                _gl.EnableVertexAttribArray(0);
+                _gl.VertexAttribPointer(0, 2, GLEnum.Float, false, 4 * sizeof(float), (void*)0);
+                _gl.EnableVertexAttribArray(1);
+                _gl.VertexAttribPointer(1, 2, GLEnum.Float, false, 4 * sizeof(float), (void*)(2 * sizeof(float)));
                 
                 // Unbind
                 _gl.BindVertexArray(0);
@@ -257,6 +298,51 @@ namespace SilkRay
             _gl.BindVertexArray(0);
         }
 
+        public void DrawTexture(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint)
+        {
+            if (_disposed || _textureShader == null || texture.Id == 0)
+                return;
+
+            // Calculate texture coordinates based on source rectangle
+            float texLeft = source.X / texture.Width;
+            float texTop = source.Y / texture.Height;
+            float texRight = (source.X + source.Width) / texture.Width;
+            float texBottom = (source.Y + source.Height) / texture.Height;
+
+            // Define quad vertices with position and texture coordinates
+            float[] vertices = {
+                // Position (x, y), TexCoord (u, v)
+                dest.X, dest.Y + dest.Height, texLeft, texBottom,  // Bottom-left
+                dest.X, dest.Y, texLeft, texTop,                   // Top-left
+                dest.X + dest.Width, dest.Y + dest.Height, texRight, texBottom, // Bottom-right
+                dest.X + dest.Width, dest.Y, texRight, texTop      // Top-right
+            };
+
+            // Bind texture shader and set uniforms
+            _textureShader.Use();
+            _textureShader.SetUniform("screenSize", _screenSize);
+            _textureShader.SetUniform("tintColor", tint);
+
+            // Bind texture
+            _gl.ActiveTexture(TextureUnit.Texture0);
+            _gl.BindTexture(TextureTarget.Texture2D, texture.Id);
+            _textureShader.SetUniform("ourTexture", 0);
+
+            // Upload vertex data and draw
+            _gl.BindVertexArray(_textureVao);
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _textureVbo);
+            
+            fixed (float* v = &vertices[0])
+            {
+                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v, BufferUsageARB.DynamicDraw);
+            }
+
+            _gl.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
+            
+            _gl.BindVertexArray(0);
+            _gl.BindTexture(TextureTarget.Texture2D, 0);
+        }
+
         public void Resize(int width, int height)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
@@ -271,7 +357,10 @@ namespace SilkRay
             {
                 _gl.DeleteVertexArray(_vao);
                 _gl.DeleteBuffer(_vbo);
+                _gl.DeleteVertexArray(_textureVao);
+                _gl.DeleteBuffer(_textureVbo);
                 _shader?.Dispose();
+                _textureShader?.Dispose();
                 _disposed = true;
             }
             GC.SuppressFinalize(this);
