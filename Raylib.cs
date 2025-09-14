@@ -260,18 +260,83 @@ namespace SilkRay
 
         public static bool IsWindowState(uint flag)
         {
-            // Window state flags - would need proper flag system
+            if (RaylibInternal.Window == null) return false;
+            
+            var windowStateFlag = (WindowStateFlags)flag;
+            
+            if (windowStateFlag.HasFlag(WindowStateFlags.FullscreenMode))
+                return RaylibInternal.Window.WindowState == WindowState.Fullscreen;
+            
+            if (windowStateFlag.HasFlag(WindowStateFlags.WindowMaximized))
+                return RaylibInternal.Window.WindowState == WindowState.Maximized;
+            
+            if (windowStateFlag.HasFlag(WindowStateFlags.WindowMinimized))
+                return RaylibInternal.Window.WindowState == WindowState.Minimized;
+            
+            if (windowStateFlag.HasFlag(WindowStateFlags.WindowHidden))
+                return !RaylibInternal.Window.IsVisible;
+            
+            if (windowStateFlag.HasFlag(WindowStateFlags.WindowResizable))
+                return RaylibInternal.Window.WindowBorder == WindowBorder.Resizable;
+            
+            if (windowStateFlag.HasFlag(WindowStateFlags.WindowUndecorated))
+                return RaylibInternal.Window.WindowBorder == WindowBorder.Hidden;
+            
             return false;
         }
 
         public static void SetWindowState(uint flags)
         {
-            // Set window state using flags - placeholder
+            if (RaylibInternal.Window == null) return;
+            
+            var windowStateFlags = (WindowStateFlags)flags;
+            
+            if (windowStateFlags.HasFlag(WindowStateFlags.FullscreenMode))
+                RaylibInternal.Window.WindowState = WindowState.Fullscreen;
+            else if (windowStateFlags.HasFlag(WindowStateFlags.WindowMaximized))
+                RaylibInternal.Window.WindowState = WindowState.Maximized;
+            else if (windowStateFlags.HasFlag(WindowStateFlags.WindowMinimized))
+                RaylibInternal.Window.WindowState = WindowState.Minimized;
+            else
+                RaylibInternal.Window.WindowState = WindowState.Normal;
+            
+            if (windowStateFlags.HasFlag(WindowStateFlags.WindowHidden))
+                RaylibInternal.Window.IsVisible = false;
+            else if (windowStateFlags.HasFlag(WindowStateFlags.WindowResizable))
+                RaylibInternal.Window.WindowBorder = WindowBorder.Resizable;
+            else if (windowStateFlags.HasFlag(WindowStateFlags.WindowUndecorated))
+                RaylibInternal.Window.WindowBorder = WindowBorder.Hidden;
         }
 
         public static void ClearWindowState(uint flags)
         {
-            // Clear window state flags - placeholder
+            if (RaylibInternal.Window == null) return;
+            
+            var windowStateFlags = (WindowStateFlags)flags;
+            
+            if (windowStateFlags.HasFlag(WindowStateFlags.FullscreenMode))
+            {
+                if (RaylibInternal.Window.WindowState == WindowState.Fullscreen)
+                    RaylibInternal.Window.WindowState = WindowState.Normal;
+            }
+            
+            if (windowStateFlags.HasFlag(WindowStateFlags.WindowMaximized))
+            {
+                if (RaylibInternal.Window.WindowState == WindowState.Maximized)
+                    RaylibInternal.Window.WindowState = WindowState.Normal;
+            }
+            
+            if (windowStateFlags.HasFlag(WindowStateFlags.WindowMinimized))
+            {
+                if (RaylibInternal.Window.WindowState == WindowState.Minimized)
+                    RaylibInternal.Window.WindowState = WindowState.Normal;
+            }
+            
+            if (windowStateFlags.HasFlag(WindowStateFlags.WindowHidden))
+                RaylibInternal.Window.IsVisible = true;
+            
+            if (windowStateFlags.HasFlag(WindowStateFlags.WindowUndecorated))
+                RaylibInternal.Window.WindowBorder = WindowBorder.Fixed;
         }
         
         public static void ClearWindowState(WindowStateFlags flags)
