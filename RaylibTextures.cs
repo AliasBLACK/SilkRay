@@ -38,15 +38,20 @@ namespace SilkRay
 					}
 				}
 
-				// Set texture parameters
-				RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Linear);
+				// Generate mipmaps for advanced filtering support
+				RaylibInternal.GL.GenerateMipmap(TextureTarget.Texture2D);
+
+				// Set default texture parameters
+				RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
 				RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
 				RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)GLEnum.ClampToEdge);
 				RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)GLEnum.ClampToEdge);
 
 				RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, 0);
 
-				return new Texture2D(textureId, width, height, 1, 1);
+				// Calculate mipmap levels
+				int mipmapLevels = (int)Math.Floor(Math.Log2(Math.Max(width, height))) + 1;
+				return new Texture2D(textureId, width, height, mipmapLevels, 1);
 			}
 			catch (Exception ex)
 			{
@@ -269,6 +274,29 @@ namespace SilkRay
 			}
 		}
 
+		// Helper function to check anisotropic filtering support
+		private static bool IsAnisotropicFilteringSupported()
+		{
+			try
+			{
+				if (RaylibInternal.GL == null) return false;
+				
+				// Check if the EXT_texture_filter_anisotropic extension is supported
+				unsafe
+				{
+					byte* extensionsPtr = RaylibInternal.GL.GetString(StringName.Extensions);
+					if (extensionsPtr == null) return false;
+					
+					string extensions = System.Runtime.InteropServices.Marshal.PtrToStringAnsi((IntPtr)extensionsPtr);
+					return extensions != null && extensions.Contains("GL_EXT_texture_filter_anisotropic");
+				}
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
 		// Texture filtering and mipmap functions
 		public static void SetTextureFilter(Texture2D texture, int filter)
 		{
@@ -297,19 +325,31 @@ namespace SilkRay
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
 						break;
 					case TEXTURE_FILTER_ANISOTROPIC_4X:
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxAnisotropy, 4.0f);
-						break;
 					case TEXTURE_FILTER_ANISOTROPIC_8X:
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxAnisotropy, 8.0f);
-						break;
 					case TEXTURE_FILTER_ANISOTROPIC_16X:
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxAnisotropy, 16.0f);
+						// Check if anisotropic filtering is supported
+						if (IsAnisotropicFilteringSupported())
+						{
+							RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
+							RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
+							
+							float anisotropy = filter switch
+							{
+								TEXTURE_FILTER_ANISOTROPIC_4X => 4.0f,
+								TEXTURE_FILTER_ANISOTROPIC_8X => 8.0f,
+								TEXTURE_FILTER_ANISOTROPIC_16X => 16.0f,
+								_ => 4.0f
+							};
+							
+							RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxAnisotropy, anisotropy);
+						}
+						else
+						{
+							Console.WriteLine($"Warning: Anisotropic filtering not supported, falling back to trilinear");
+							// Fallback to trilinear filtering
+							RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
+							RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
+						}
 						break;
 				}
 				
