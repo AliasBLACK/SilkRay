@@ -270,7 +270,7 @@ namespace SilkRay
 		}
 
 		// Texture filtering and mipmap functions
-		public static void SetTextureFilter(Texture2D texture, TextureFilter filter)
+		public static void SetTextureFilter(Texture2D texture, int filter)
 		{
 			if (RaylibInternal.GL == null || texture.Id == 0)
 			{
@@ -284,29 +284,29 @@ namespace SilkRay
 				
 				switch (filter)
 				{
-					case TextureFilter.Point:
+					case TEXTURE_FILTER_POINT:
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Nearest);
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Nearest);
 						break;
-					case TextureFilter.Bilinear:
+					case TEXTURE_FILTER_BILINEAR:
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Linear);
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
 						break;
-					case TextureFilter.Trilinear:
+					case TEXTURE_FILTER_TRILINEAR:
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
 						break;
-					case TextureFilter.Anisotropic4x:
+					case TEXTURE_FILTER_ANISOTROPIC_4X:
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxAnisotropy, 4.0f);
 						break;
-					case TextureFilter.Anisotropic8x:
+					case TEXTURE_FILTER_ANISOTROPIC_8X:
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxAnisotropy, 8.0f);
 						break;
-					case TextureFilter.Anisotropic16x:
+					case TEXTURE_FILTER_ANISOTROPIC_16X:
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
 						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxAnisotropy, 16.0f);
@@ -321,7 +321,7 @@ namespace SilkRay
 			}
 		}
 
-		public static void SetTextureWrap(Texture2D texture, TextureWrap wrap)
+		public static void SetTextureWrap(Texture2D texture, int wrap)
 		{
 			if (RaylibInternal.GL == null || texture.Id == 0)
 			{
@@ -335,10 +335,10 @@ namespace SilkRay
 				
 				int wrapMode = wrap switch
 				{
-					TextureWrap.Repeat => (int)GLEnum.Repeat,
-					TextureWrap.Clamp => (int)GLEnum.ClampToEdge,
-					TextureWrap.MirrorRepeat => (int)GLEnum.MirroredRepeat,
-					TextureWrap.MirrorClamp => (int)GLEnum.MirrorClampToEdge,
+					TEXTURE_WRAP_REPEAT => (int)GLEnum.Repeat,
+					TEXTURE_WRAP_CLAMP => (int)GLEnum.ClampToEdge,
+					TEXTURE_WRAP_MIRROR_REPEAT => (int)GLEnum.MirroredRepeat,
+					TEXTURE_WRAP_MIRROR_CLAMP => (int)GLEnum.MirrorClampToEdge,
 					_ => (int)GLEnum.Repeat
 				};
 				

@@ -5,6 +5,8 @@ global using static SilkRay.KeyboardKeys;
 global using static SilkRay.WindowFlags;
 global using static SilkRay.MouseButton;
 global using static SilkRay.MouseCursor;
+global using static SilkRay.TextureFilter;
+global using static SilkRay.TextureWrap;
 
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -1369,22 +1371,22 @@ namespace SilkRay
 	}
 
 	// Texture filtering modes
-	public enum TextureFilter
+	public static class TextureFilter
 	{
-		Point = 0,              // No filter, just pixel approximation
-		Bilinear,               // Linear filtering
-		Trilinear,              // Trilinear filtering (linear with mipmaps)
-		Anisotropic4x,          // Anisotropic filtering 4x
-		Anisotropic8x,          // Anisotropic filtering 8x
-		Anisotropic16x          // Anisotropic filtering 16x
+		public const int TEXTURE_FILTER_POINT = 0;				// No filter; just pixel approximation
+		public const int TEXTURE_FILTER_BILINEAR = 1;			// Linear filtering
+		public const int TEXTURE_FILTER_TRILINEAR = 2;			// Trilinear filtering (linear with mipmaps)
+		public const int TEXTURE_FILTER_ANISOTROPIC_4X = 3;		// Anisotropic filtering 4x
+		public const int TEXTURE_FILTER_ANISOTROPIC_8X = 4;		// Anisotropic filtering 8x
+		public const int TEXTURE_FILTER_ANISOTROPIC_16X = 5;	// Anisotropic filtering 16x
 	}
 
-	public enum TextureWrap
+	public static class TextureWrap
 	{
-		Repeat = 0,             // Repeats texture in tiled mode
-		Clamp,                  // Clamps texture to edge pixel in tiled mode
-		MirrorRepeat,           // Repeats texture with mirror in tiled mode
-		MirrorClamp             // Clamps texture to edge pixel with mirror in tiled mode
+		public const int TEXTURE_WRAP_REPEAT = 0;				// Repeats texture in tiled mode
+		public const int TEXTURE_WRAP_CLAMP = 1;				// Clamps texture to edge pixel in tiled mode
+		public const int TEXTURE_WRAP_MIRROR_REPEAT = 2;		// Repeats texture with mirror in tiled mode
+		public const int TEXTURE_WRAP_MIRROR_CLAMP = 3;			// Clamps texture to edge pixel with mirror in tiled mode
 	}
 
 	// Additional structures for API compatibility
@@ -1407,11 +1409,11 @@ namespace SilkRay
 
 	public struct Texture2D(uint id, int width, int height, int mipmaps = 1, int format = 1)
 	{
-		public uint Id = id;          // OpenGL texture id
-		public int Width = width;        // Texture base width
-		public int Height = height;       // Texture base height
-		public int Mipmaps = mipmaps;      // Mipmap levels, 1 by default
-		public int Format = format;       // Data format (PixelFormat type)
+		public uint Id = id;				// OpenGL texture id
+		public int Width = width;			// Texture base width
+		public int Height = height;		// Texture base height
+		public int Mipmaps = mipmaps;		// Mipmap levels, 1 by default
+		public int Format = format;		// Data format (PixelFormat type)
 	}
 
 	public struct NPatchInfo(Rectangle source, int left, int top, int right, int bottom, int layout)
