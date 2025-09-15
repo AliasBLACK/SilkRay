@@ -83,17 +83,17 @@ namespace SilkRay
 				// For fullscreen modes, use default size if width/height are 0
 				if (width <= 0 || height <= 0)
 				{
-					options.Size = new Silk.NET.Maths.Vector2D<int>(1920, 1080); // Default fullscreen size
+					options.Size = new(1920, 1080); // Default fullscreen size
 				}
 				else
 				{
-					options.Size = new Silk.NET.Maths.Vector2D<int>(width, height);
+					options.Size = new(width, height);
 				}
 			}
 			else
 			{
 				// For windowed modes, ensure minimum size
-				options.Size = new Silk.NET.Maths.Vector2D<int>(Math.Max(width, 1), Math.Max(height, 1));
+				options.Size = new(Math.Max(width, 1), Math.Max(height, 1));
 			}
 			
 			options.Title = title;
@@ -102,7 +102,7 @@ namespace SilkRay
 			options.FramesPerSecond = 60;
 			
 			// Ensure we have a proper OpenGL context
-			options.API = new GraphicsAPI(
+			options.API = new(
 				ContextAPI.OpenGL,
 				ContextProfile.Core,
 				ContextFlags.Default,
@@ -378,7 +378,7 @@ namespace SilkRay
 		{
 			if (RaylibInternal.Window != null)
 			{
-				RaylibInternal.Window.Size = new Silk.NET.Maths.Vector2D<int>(width, height);
+				RaylibInternal.Window.Size = new(width, height);
 			}
 		}
 
@@ -391,7 +391,7 @@ namespace SilkRay
 		{
 			if (RaylibInternal.Window != null)
 			{
-				RaylibInternal.Window.Position = new Silk.NET.Maths.Vector2D<int>(x, y);
+				RaylibInternal.Window.Position = new(x, y);
 			}
 		}
 
@@ -1048,7 +1048,7 @@ namespace SilkRay
 			if (RaylibInternal.Window == null) return;
 
 			RaylibInternal.GL = RaylibInternal.Window.CreateOpenGL();
-			RaylibInternal.Renderer = new Renderer(RaylibInternal.GL, RaylibInternal.Window.Size.X, RaylibInternal.Window.Size.Y);
+			RaylibInternal.Renderer = new(RaylibInternal.GL, RaylibInternal.Window.Size.X, RaylibInternal.Window.Size.Y);
 			RaylibInternal.Input = RaylibInternal.Window.CreateInput();
 			
 			// Set up keyboard event handlers
@@ -1212,7 +1212,7 @@ namespace SilkRay
 				}
 
 				// Create FontSystem with OpenGL texture renderer
-				var fontSystemSettings = new FontSystemSettings
+				FontSystemSettings fontSystemSettings = new()
 				{
 					TextureWidth = 1024,
 					TextureHeight = 1024,
@@ -1222,7 +1222,7 @@ namespace SilkRay
 				};
 
 				// Initialize FontStashSharp system
-				RaylibInternal.FontSystem = new FontSystem(fontSystemSettings);
+				RaylibInternal.FontSystem = new(fontSystemSettings);
 				
 				// Create default bitmap font texture
 				RaylibInternal.DefaultFontTexture = DefaultFont.CreateDefaultFontTexture(RaylibInternal.GL);
@@ -1253,7 +1253,7 @@ namespace SilkRay
 				}
 
 				// Create a new FontSystem specifically for this font
-				var fontSystem = new FontSystem();
+				FontSystem fontSystem = new();
 				byte[] fontData = File.ReadAllBytes(fileName);
 				fontSystem.AddFont(fontData);
 				

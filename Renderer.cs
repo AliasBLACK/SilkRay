@@ -22,7 +22,7 @@ namespace SilkRay
 		public Renderer(GL gl, int width, int height)
 		{
 			_gl = gl ?? throw new ArgumentNullException(nameof(gl));
-			_screenSize = new Vector2(width, height);
+			_screenSize = new(width, height);
 			Initialize();
 		}
 
@@ -49,7 +49,7 @@ namespace SilkRay
 						FragColor = color;
 					}";
 
-				_shader = new Shader(_gl, vertexShader, fragmentShader);
+				_shader = new(_gl, vertexShader, fragmentShader);
 
 				// Create texture shader
 				const string textureVertexShader = @"#version 330 core
@@ -74,7 +74,7 @@ namespace SilkRay
 						FragColor = texture(ourTexture, TexCoord) * tintColor;
 					}";
 
-				_textureShader = new Shader(_gl, textureVertexShader, textureFragmentShader);
+				_textureShader = new(_gl, textureVertexShader, textureFragmentShader);
 
 				// Set up vertex array and buffer objects for shapes
 				_vao = _gl.GenVertexArray();
@@ -103,7 +103,7 @@ namespace SilkRay
 				_gl.BindVertexArray(0);
 
 				// Initialize font renderer
-				_fontRenderer = new FontRenderer(_gl, this);
+				_fontRenderer = new(_gl, this);
 				
 				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
 				
@@ -393,8 +393,8 @@ namespace SilkRay
 				int actualCharWidth = DefaultFont.GetCharWidth(c);
 				var (u1, v1, u2, v2) = DefaultFont.GetCharTextureCoords(c);
 				
-				var sourceRect = new Rectangle(u1 * 128, v1 * 128, (u2 - u1) * 128, (v2 - v1) * 128);
-				var destRect = new Rectangle(currentX, currentY, actualCharWidth * scale, charHeight * scale);
+				Rectangle sourceRect = new(u1 * 128, v1 * 128, (u2 - u1) * 128, (v2 - v1) * 128);
+				Rectangle destRect = new(currentX, currentY, actualCharWidth * scale, charHeight * scale);
 				
 				DrawTexturePro(fontTexture, sourceRect, destRect, Vector2.Zero, 0.0f, color);
 				
@@ -422,7 +422,7 @@ namespace SilkRay
 		{
 			ObjectDisposedException.ThrowIf(_disposed, this);
 				
-			_screenSize = new Vector2(width, height);
+			_screenSize = new(width, height);
 			_gl.Viewport(0, 0, (uint)width, (uint)height);
 		}
 

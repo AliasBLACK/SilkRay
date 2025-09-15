@@ -30,7 +30,7 @@ namespace SilkRay
 
             _gl.BindTexture(TextureTarget.Texture2D, 0);
 
-            var texture = new FontTexture(textureId, width, height);
+            FontTexture texture = new(textureId, width, height);
             _textures[texture] = texture;
             return texture;
         }
@@ -104,27 +104,27 @@ namespace SilkRay
             var fontTexture = _textureManager.GetFontTexture(texture);
             if (fontTexture == null) return;
 
-            var texture2D = new Texture2D(fontTexture.Id, fontTexture.Width, fontTexture.Height);
+            Texture2D texture2D = new(fontTexture.Id, fontTexture.Width, fontTexture.Height);
 
             // Convert parameters to SilkRay types
-            var silkRayPosition = new Vector2(position.X, position.Y);
-            var silkRayOrigin = new Vector2(origin.X, origin.Y);
-            var silkRayColor = new Color(color.R, color.G, color.B, color.A);
+            Vector2 silkRayPosition = new(position.X, position.Y);
+            Vector2 silkRayOrigin = new(origin.X, origin.Y);
+            Color silkRayColor = new(color.R, color.G, color.B, color.A);
 
             Rectangle sourceRect;
             if (sourceRectangle.HasValue)
             {
                 var src = sourceRectangle.Value;
-                sourceRect = new Rectangle(src.X, src.Y, src.Width, src.Height);
+                sourceRect = new(src.X, src.Y, src.Width, src.Height);
             }
             else
             {
-                sourceRect = new Rectangle(0, 0, fontTexture.Width, fontTexture.Height);
+                sourceRect = new(0, 0, fontTexture.Width, fontTexture.Height);
             }
 
             // Calculate destination rectangle with scale (ensure minimum scale of 1.0)
             float actualScale = scale <= 0 ? 1.0f : scale;
-            var destRect = new Rectangle(
+            Rectangle destRect = new(
                 (int)silkRayPosition.X, (int)silkRayPosition.Y,
                 (int)(sourceRect.Width * actualScale), (int)(sourceRect.Height * actualScale)
             );
@@ -152,7 +152,7 @@ namespace SilkRay
                                Math.Max(bottomLeft.Position.Y, bottomRight.Position.Y));
 
             // Create source rectangle from texture coordinates
-            var sourceRect = new Rectangle(
+            Rectangle sourceRect = new(
                 (int)(topLeft.TextureCoordinate.X * fontTexture.Width),
                 (int)(topLeft.TextureCoordinate.Y * fontTexture.Height),
                 (int)((topRight.TextureCoordinate.X - topLeft.TextureCoordinate.X) * fontTexture.Width),
@@ -160,10 +160,10 @@ namespace SilkRay
             );
 
             // Create destination rectangle
-            var destRect = new Rectangle((int)minX, (int)minY, (int)(maxX - minX), (int)(maxY - minY));
+            Rectangle destRect = new((int)minX, (int)minY, (int)(maxX - minX), (int)(maxY - minY));
 
             // Extract color from vertex
-            var color = new Color(topLeft.Color.R, topLeft.Color.G, topLeft.Color.B, topLeft.Color.A);
+            Color color = new(topLeft.Color.R, topLeft.Color.G, topLeft.Color.B, topLeft.Color.A);
 
             // Draw using existing texture rendering system
             _renderer.DrawTexture(texture2D, sourceRect, destRect, new Vector2(0, 0), 0.0f, color);
@@ -190,10 +190,10 @@ namespace SilkRay
             try
             {
                 // Convert SilkRay color to FontStashSharp color
-                var fontColor = new FontStashSharp.FSColor(color.R, color.G, color.B, color.A);
+                FontStashSharp.FSColor fontColor = new(color.R, color.G, color.B, color.A);
                 
                 // Convert SilkRay Vector2 to System.Numerics.Vector2
-                var sysPosition = new System.Numerics.Vector2(position.X, position.Y);
+                System.Numerics.Vector2 sysPosition = new(position.X, position.Y);
                 
                 // Use FontStashSharp's DrawText method with our custom renderer
                 spriteFont.DrawText(_fontRenderer, text, sysPosition, fontColor, 0f, 
@@ -229,7 +229,7 @@ namespace SilkRay
                 }
 
                 // Use different colors to distinguish characters
-                var charColor = new Color(
+                Color charColor = new(
                     (byte)Math.Min(255, color.R + (c % 30)),
                     (byte)Math.Min(255, color.G + (c % 20)), 
                     (byte)Math.Min(255, color.B + (c % 25)),

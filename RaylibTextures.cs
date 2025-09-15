@@ -134,9 +134,9 @@ namespace SilkRay
 			try
 			{
 				// Calculate texture rectangle
-				Rectangle sourceRec = new Rectangle(0, 0, texture.Width, texture.Height);
-				Rectangle destRec = new Rectangle(position.X, position.Y, texture.Width * scale, texture.Height * scale);
-				Vector2 origin = new Vector2(0, 0);
+				Rectangle sourceRec = new(0, 0, texture.Width, texture.Height);
+				Rectangle destRec = new(position.X, position.Y, texture.Width * scale, texture.Height * scale);
+				Vector2 origin = new(0, 0);
 
 				DrawTexturePro(texture, sourceRec, destRec, origin, rotation, tint);
 			}
@@ -148,7 +148,7 @@ namespace SilkRay
 
 		public static void DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint)
 		{
-			Rectangle dest = new Rectangle(position.X, position.Y, source.Width, source.Height);
+			Rectangle dest = new(position.X, position.Y, source.Width, source.Height);
 			DrawTexturePro(texture, source, dest, new Vector2(0, 0), 0.0f, tint);
 		}
 
@@ -222,35 +222,35 @@ namespace SilkRay
 			
 			// Source patches (texture coordinates)
 			// Top row
-			srcPatches[0] = new Rectangle(src.X, src.Y, nPatchInfo.left, nPatchInfo.top); // Top-left corner
-			srcPatches[1] = new Rectangle(src.X + nPatchInfo.left, src.Y, srcWidth - nPatchInfo.left - nPatchInfo.right, nPatchInfo.top); // Top edge
-			srcPatches[2] = new Rectangle(src.X + srcWidth - nPatchInfo.right, src.Y, nPatchInfo.right, nPatchInfo.top); // Top-right corner
+			srcPatches[0] = new(src.X, src.Y, nPatchInfo.left, nPatchInfo.top); // Top-left corner
+			srcPatches[1] = new(src.X + nPatchInfo.left, src.Y, srcWidth - nPatchInfo.left - nPatchInfo.right, nPatchInfo.top); // Top edge
+			srcPatches[2] = new(src.X + srcWidth - nPatchInfo.right, src.Y, nPatchInfo.right, nPatchInfo.top); // Top-right corner
 			
 			// Middle row
-			srcPatches[3] = new Rectangle(src.X, src.Y + nPatchInfo.top, nPatchInfo.left, srcHeight - nPatchInfo.top - nPatchInfo.bottom); // Left edge
-			srcPatches[4] = new Rectangle(src.X + nPatchInfo.left, src.Y + nPatchInfo.top, srcWidth - nPatchInfo.left - nPatchInfo.right, srcHeight - nPatchInfo.top - nPatchInfo.bottom); // Center
-			srcPatches[5] = new Rectangle(src.X + srcWidth - nPatchInfo.right, src.Y + nPatchInfo.top, nPatchInfo.right, srcHeight - nPatchInfo.top - nPatchInfo.bottom); // Right edge
+			srcPatches[3] = new(src.X, src.Y + nPatchInfo.top, nPatchInfo.left, srcHeight - nPatchInfo.top - nPatchInfo.bottom); // Left edge
+			srcPatches[4] = new(src.X + nPatchInfo.left, src.Y + nPatchInfo.top, srcWidth - nPatchInfo.left - nPatchInfo.right, srcHeight - nPatchInfo.top - nPatchInfo.bottom); // Center
+			srcPatches[5] = new(src.X + srcWidth - nPatchInfo.right, src.Y + nPatchInfo.top, nPatchInfo.right, srcHeight - nPatchInfo.top - nPatchInfo.bottom); // Right edge
 			
 			// Bottom row
-			srcPatches[6] = new Rectangle(src.X, src.Y + srcHeight - nPatchInfo.bottom, nPatchInfo.left, nPatchInfo.bottom); // Bottom-left corner
-			srcPatches[7] = new Rectangle(src.X + nPatchInfo.left, src.Y + srcHeight - nPatchInfo.bottom, srcWidth - nPatchInfo.left - nPatchInfo.right, nPatchInfo.bottom); // Bottom edge
-			srcPatches[8] = new Rectangle(src.X + srcWidth - nPatchInfo.right, src.Y + srcHeight - nPatchInfo.bottom, nPatchInfo.right, nPatchInfo.bottom); // Bottom-right corner
+			srcPatches[6] = new(src.X, src.Y + srcHeight - nPatchInfo.bottom, nPatchInfo.left, nPatchInfo.bottom); // Bottom-left corner
+			srcPatches[7] = new(src.X + nPatchInfo.left, src.Y + srcHeight - nPatchInfo.bottom, srcWidth - nPatchInfo.left - nPatchInfo.right, nPatchInfo.bottom); // Bottom edge
+			srcPatches[8] = new(src.X + srcWidth - nPatchInfo.right, src.Y + srcHeight - nPatchInfo.bottom, nPatchInfo.right, nPatchInfo.bottom); // Bottom-right corner
 			
 			// Destination patches (screen coordinates)
 			// Top row
-			destPatches[0] = new Rectangle(dest.X, dest.Y, nPatchInfo.left, nPatchInfo.top); // Top-left corner
-			destPatches[1] = new Rectangle(dest.X + nPatchInfo.left, dest.Y, destWidth - nPatchInfo.left - nPatchInfo.right, nPatchInfo.top); // Top edge (stretched horizontally)
-			destPatches[2] = new Rectangle(dest.X + destWidth - nPatchInfo.right, dest.Y, nPatchInfo.right, nPatchInfo.top); // Top-right corner
+			destPatches[0] = new(dest.X, dest.Y, nPatchInfo.left, nPatchInfo.top); // Top-left corner
+			destPatches[1] = new(dest.X + nPatchInfo.left, dest.Y, destWidth - nPatchInfo.left - nPatchInfo.right, nPatchInfo.top); // Top edge (stretched horizontally)
+			destPatches[2] = new(dest.X + destWidth - nPatchInfo.right, dest.Y, nPatchInfo.right, nPatchInfo.top); // Top-right corner
 			
 			// Middle row
-			destPatches[3] = new Rectangle(dest.X, dest.Y + nPatchInfo.top, nPatchInfo.left, destHeight - nPatchInfo.top - nPatchInfo.bottom); // Left edge (stretched vertically)
-			destPatches[4] = new Rectangle(dest.X + nPatchInfo.left, dest.Y + nPatchInfo.top, destWidth - nPatchInfo.left - nPatchInfo.right, destHeight - nPatchInfo.top - nPatchInfo.bottom); // Center (stretched both ways)
-			destPatches[5] = new Rectangle(dest.X + destWidth - nPatchInfo.right, dest.Y + nPatchInfo.top, nPatchInfo.right, destHeight - nPatchInfo.top - nPatchInfo.bottom); // Right edge (stretched vertically)
+			destPatches[3] = new(dest.X, dest.Y + nPatchInfo.top, nPatchInfo.left, destHeight - nPatchInfo.top - nPatchInfo.bottom); // Left edge (stretched vertically)
+			destPatches[4] = new(dest.X + nPatchInfo.left, dest.Y + nPatchInfo.top, destWidth - nPatchInfo.left - nPatchInfo.right, destHeight - nPatchInfo.top - nPatchInfo.bottom); // Center (stretched both ways)
+			destPatches[5] = new(dest.X + destWidth - nPatchInfo.right, dest.Y + nPatchInfo.top, nPatchInfo.right, destHeight - nPatchInfo.top - nPatchInfo.bottom); // Right edge (stretched vertically)
 			
 			// Bottom row
-			destPatches[6] = new Rectangle(dest.X, dest.Y + destHeight - nPatchInfo.bottom, nPatchInfo.left, nPatchInfo.bottom); // Bottom-left corner
-			destPatches[7] = new Rectangle(dest.X + nPatchInfo.left, dest.Y + destHeight - nPatchInfo.bottom, destWidth - nPatchInfo.left - nPatchInfo.right, nPatchInfo.bottom); // Bottom edge (stretched horizontally)
-			destPatches[8] = new Rectangle(dest.X + destWidth - nPatchInfo.right, dest.Y + destHeight - nPatchInfo.bottom, nPatchInfo.right, nPatchInfo.bottom); // Bottom-right corner
+			destPatches[6] = new(dest.X, dest.Y + destHeight - nPatchInfo.bottom, nPatchInfo.left, nPatchInfo.bottom); // Bottom-left corner
+			destPatches[7] = new(dest.X + nPatchInfo.left, dest.Y + destHeight - nPatchInfo.bottom, destWidth - nPatchInfo.left - nPatchInfo.right, nPatchInfo.bottom); // Bottom edge (stretched horizontally)
+			destPatches[8] = new(dest.X + destWidth - nPatchInfo.right, dest.Y + destHeight - nPatchInfo.bottom, nPatchInfo.right, nPatchInfo.bottom); // Bottom-right corner
 			
 			// Draw all 9 patches
 			for (int i = 0; i < 9; i++)
