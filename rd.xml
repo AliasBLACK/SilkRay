@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Directives xmlns="http://schemas.microsoft.com/netfx/2013/01/metadata">
+  <Application>
+    <!-- Preserve all public APIs in SilkRay -->
+    <Assembly Name="SilkRay" Dynamic="Required All" />
+    
+    <!-- Preserve Silk.NET types that may be used via reflection -->
+    <Assembly Name="Silk.NET.OpenGL" Dynamic="Required All" />
+    <Assembly Name="Silk.NET.Windowing" Dynamic="Required All" />
+    <Assembly Name="Silk.NET.GLFW" Dynamic="Required All" />
+    <Assembly Name="Silk.NET.Input" Dynamic="Required All" />
+    
+    <!-- Preserve FontStashSharp types -->
+    <Assembly Name="FontStashSharp" Dynamic="Required All" />
+    <Assembly Name="FontStashSharp.PlatformAgnostic" Dynamic="Required All" />
+    
+    <!-- Preserve StbImageSharp types -->
+    <Assembly Name="StbImageSharp" Dynamic="Required All" />
+    
+    <!-- Preserve TextCopy types -->
+    <Assembly Name="TextCopy" Dynamic="Required All" />
+    
+    <!-- Preserve System types commonly used in graphics applications -->
+    <Type Name="System.Numerics.Vector2" Dynamic="Required All" />
+    <Type Name="System.Numerics.Vector3" Dynamic="Required All" />
+    <Type Name="System.Numerics.Vector4" Dynamic="Required All" />
+    <Type Name="System.Numerics.Matrix4x4" Dynamic="Required All" />
+    
+    <!-- Preserve delegate types for event handlers -->
+    <Type Name="System.Action" Dynamic="Required All" />
+    <Type Name="System.Action`1" Dynamic="Required All" />
+    <Type Name="System.Action`2" Dynamic="Required All" />
+    <Type Name="System.Func`1" Dynamic="Required All" />
+    <Type Name="System.Func`2" Dynamic="Required All" />
+    <Type Name="System.EventHandler" Dynamic="Required All" />
+    <Type Name="System.EventHandler`1" Dynamic="Required All" />
+  </Application>
+</Directives>

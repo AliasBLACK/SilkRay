@@ -105,5 +105,19 @@ namespace SilkRay
 				DrawRectangle((int)(rec.X + rec.Width - thickness), (int)rec.Y, thickness, (int)rec.Height, color);
 			}
 		}
+
+		public static void DrawRectanglePro(Rectangle rec, Vector2 origin, float rotation, Color color)
+		{
+			// For now, implement as a simple rectangle (rotation would need matrix transforms)
+			DrawRectangle((int)(rec.X - origin.X), (int)(rec.Y - origin.Y), (int)rec.Width, (int)rec.Height, color);
+		}
+
+		public static void DrawTriangle(Vector2 v1, Vector2 v2, Vector2 v3, Color color)
+		{
+			// Draw triangle using lines for now
+			DrawLineV(v1, v2, color);
+			DrawLineV(v2, v3, color);
+			DrawLineV(v3, v1, color);
+		}
 	}
 }

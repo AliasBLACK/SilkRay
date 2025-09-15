@@ -196,12 +196,16 @@ namespace SilkRay
 			}
 
 			// Generate circle vertices
-			for (int i = 0; i <= segments; i++)
+			for (int i = 0; i < segments; i++)
 			{
 				float angle = (float)(2.0 * Math.PI * i / segments);
 				vertices[index++] = centerX + radius * (float)Math.Cos(angle);
 				vertices[index++] = centerY + radius * (float)Math.Sin(angle);
 			}
+		
+			// Add the starting vertex again to close the circle
+			vertices[index++] = centerX + radius;
+			vertices[index++] = centerY;
 
 			// Bind shader and set uniforms
 			_shader.Use();
@@ -218,9 +222,9 @@ namespace SilkRay
 			}
 
 			if (filled)
-				_gl.DrawArrays(PrimitiveType.TriangleFan, 0, segments + 1);
+				_gl.DrawArrays(PrimitiveType.TriangleFan, 0, segments + 2);
 			else
-				_gl.DrawArrays(PrimitiveType.LineLoop, 0, segments);
+				_gl.DrawArrays(PrimitiveType.LineStrip, 0, segments + 1);
 			
 			_gl.BindVertexArray(0);
 		}

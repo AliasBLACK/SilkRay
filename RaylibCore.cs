@@ -16,12 +16,12 @@ using Silk.NET.Windowing;
 using Silk.NET.GLFW;
 using Silk.NET.Input;
 using TextCopy;
-using StbImageSharp;
 using FontStashSharp;
-using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace SilkRay
 {
@@ -74,9 +74,11 @@ namespace SilkRay
 	/// <summary>
 	/// Core Raylib functions implementation using Silk.NET
 	/// </summary>
+	[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "SilkRay is designed to work with NativeAOT")]
 	public static class RaylibCore
 	{
 		// Helper function to ensure GLFW is initialized
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static unsafe void EnsureGlfwInitialized()
 		{
 			if (!RaylibInternal.GlfwInitialized)
@@ -1329,6 +1331,24 @@ namespace SilkRay
 			return 1.0f / 60.0f; // Assume 60 FPS for now
 		}
 
+		public static int GetRandomValue(int min, int max)
+		{
+			return Random.Shared.Next(min, max + 1);
+		}
+
+		public static void DrawFPS(int posX, int posY)
+		{
+			// Calculate FPS (simplified)
+			int fps = (int)(1.0f / GetFrameTime());
+			RaylibText.DrawText($"FPS: {fps}", posX, posY, 20, Color.Green);
+		}
+
+		public static bool CheckCollisionPointRec(Vector2 point, Rectangle rec)
+		{
+			return (point.X >= rec.X) && (point.X < (rec.X + rec.Width)) && 
+			       (point.Y >= rec.Y) && (point.Y < (rec.Y + rec.Height));
+		}
+
 		public static int GetFPS()
 		{
 			return 60; // Placeholder
@@ -1523,8 +1543,10 @@ namespace SilkRay
 		public static string GetGamepadName(int gamepad)
 		{
 			if (!IsGamepadAvailable(gamepad)) return string.Empty;
+			if (RaylibInternal.Input == null) return string.Empty;
 			
-			return RaylibInternal.Input.Gamepads[gamepad].Name ?? $"Gamepad {gamepad}";
+			var gamepadDevice = RaylibInternal.Input.Gamepads[gamepad];
+			return gamepadDevice?.Name ?? $"Gamepad {gamepad}";
 		}
 
 		public static bool IsGamepadButtonPressed(int gamepad, int button)
@@ -1599,6 +1621,7 @@ namespace SilkRay
 		public static float GetGamepadAxisMovement(int gamepad, int axis)
 		{
 			if (!IsGamepadAvailable(gamepad)) return 0.0f;
+			if (RaylibInternal.Input == null) return 0.0f;
 			
 			var gamepadDevice = RaylibInternal.Input.Gamepads[gamepad];
 			
@@ -1633,6 +1656,7 @@ namespace SilkRay
 		public static void SetGamepadVibration(int gamepad, float leftMotor, float rightMotor, float duration)
 		{
 			if (!IsGamepadAvailable(gamepad)) return;
+			if (RaylibInternal.Input == null) return;
 			
 			try
 			{
