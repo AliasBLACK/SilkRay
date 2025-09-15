@@ -5,21 +5,13 @@ namespace SilkRay
 	/// <summary>
 	/// Vector2 structure for 2D math operations
 	/// </summary>
-	public struct Vector2
+	public struct Vector2(float x, float y)
 	{
-		public float X;
-		public float Y;
+		public float X = x;
+		public float Y = y;
 
-		public Vector2(float x, float y)
+		public Vector2(float value) : this(value, value)
 		{
-			X = x;
-			Y = y;
-		}
-
-		public Vector2(float value)
-		{
-			X = value;
-			Y = value;
 		}
 
 		// Vector operations

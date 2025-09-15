@@ -6,27 +6,19 @@ namespace SilkRay
     /// <summary>
     /// Color structure representing RGBA values
     /// </summary>
-    public struct Color
+    public struct Color(byte r, byte g, byte b, byte a = 255)
     {
-        public byte R;
-        public byte G;
-        public byte B;
-        public byte A;
+        public byte R = r;
+        public byte G = g;
+        public byte B = b;
+        public byte A = a;
 
-        public Color(byte r, byte g, byte b, byte a = 255)
+        public Color(int r, int g, int b, int a = 255) : this(
+            (byte)Math.Clamp(r, 0, 255),
+            (byte)Math.Clamp(g, 0, 255),
+            (byte)Math.Clamp(b, 0, 255),
+            (byte)Math.Clamp(a, 0, 255))
         {
-            R = r;
-            G = g;
-            B = b;
-            A = a;
-        }
-
-        public Color(int r, int g, int b, int a = 255)
-        {
-            R = (byte)Math.Clamp(r, 0, 255);
-            G = (byte)Math.Clamp(g, 0, 255);
-            B = (byte)Math.Clamp(b, 0, 255);
-            A = (byte)Math.Clamp(a, 0, 255);
         }
 
         /// <summary>

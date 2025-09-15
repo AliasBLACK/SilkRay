@@ -1396,40 +1396,22 @@ namespace SilkRay
 		public float Height = height;
 	}
 
-	public struct Image
+	public struct Image(byte[] data, int width, int height, int mipmaps = 1, int format = 1)
 	{
-		public byte[] Data;
-		public int Width;
-		public int Height;
-		public int Mipmaps;
-		public int Format;
-
-		public Image(byte[] data, int width, int height, int mipmaps = 1, int format = 1)
-		{
-			Data = data;
-			Width = width;
-			Height = height;
-			Mipmaps = mipmaps;
-			Format = format;
-		}
+		public byte[] Data = data;
+		public int Width = width;
+		public int Height = height;
+		public int Mipmaps = mipmaps;
+		public int Format = format;
 	}
 
-	public struct Texture2D
+	public struct Texture2D(uint id, int width, int height, int mipmaps = 1, int format = 1)
 	{
-		public uint Id;          // OpenGL texture id
-		public int Width;        // Texture base width
-		public int Height;       // Texture base height
-		public int Mipmaps;      // Mipmap levels, 1 by default
-		public int Format;       // Data format (PixelFormat type)
-
-		public Texture2D(uint id, int width, int height, int mipmaps = 1, int format = 1)
-		{
-			Id = id;
-			Width = width;
-			Height = height;
-			Mipmaps = mipmaps;
-			Format = format;
-		}
+		public uint Id = id;          // OpenGL texture id
+		public int Width = width;        // Texture base width
+		public int Height = height;       // Texture base height
+		public int Mipmaps = mipmaps;      // Mipmap levels, 1 by default
+		public int Format = format;       // Data format (PixelFormat type)
 	}
 
 	public struct NPatchInfo(Rectangle source, int left, int top, int right, int bottom, int layout)
@@ -1442,28 +1424,12 @@ namespace SilkRay
 		public int layout = layout;         // Layout of the n-patch: 3x3, 1x3 or 3x1
 	}
 
-	public struct Font
+	public struct Font(string fileName, DynamicSpriteFont spriteFont, int baseSize = 18)
 	{
-		public string FileName;             // Font file name
-		public DynamicSpriteFont? SpriteFont; // FontStashSharp sprite font
-		public int BaseSize;                // Base font size
-		public bool IsValid;                // Whether the font is valid
-
-		public Font()
-		{
-			FileName = string.Empty;
-			SpriteFont = null;
-			BaseSize = 18;
-			IsValid = false;
-		}
-
-		public Font(string fileName, DynamicSpriteFont spriteFont, int baseSize = 18)
-		{
-			FileName = fileName;
-			SpriteFont = spriteFont;
-			BaseSize = baseSize;
-			IsValid = spriteFont != null;
-		}
+		public string FileName = fileName;
+		public DynamicSpriteFont? SpriteFont = spriteFont;
+		public int BaseSize = baseSize;
+		public bool IsValid = spriteFont != null;
 	}
 
 	public static class MouseButton
