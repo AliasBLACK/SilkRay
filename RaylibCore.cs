@@ -8,12 +8,11 @@ global using static SilkRay.MouseCursor;
 global using static SilkRay.TextureFilter;
 global using static SilkRay.TextureWrap;
 
-using Silk.NET.OpenGL;
+using GL = Silk.NET.OpenGLES.GL;
 using Silk.NET.Windowing;
 using Silk.NET.GLFW;
 using Silk.NET.Input;
 using TextCopy;
-using StbImageSharp;
 using FontStashSharp;
 
 namespace SilkRay
@@ -103,12 +102,12 @@ namespace SilkRay
 			options.UpdatesPerSecond = 60;
 			options.FramesPerSecond = 60;
 			
-			// Ensure we have a proper OpenGL context
+			// Ensure we have a proper OpenGL ES context
 			options.API = new(
-				ContextAPI.OpenGL,
+				ContextAPI.OpenGLES,
 				ContextProfile.Core,
 				ContextFlags.Default,
-				new APIVersion(3, 3)
+				new APIVersion(3, 0)
 			);
 
 			// Apply config flags if they were set before InitWindow
@@ -1050,7 +1049,7 @@ namespace SilkRay
 		{
 			if (RaylibInternal.Window == null) return;
 
-			RaylibInternal.GL = RaylibInternal.Window.CreateOpenGL();
+			RaylibInternal.GL = GL.GetApi(RaylibInternal.Window);
 			RaylibInternal.Renderer = new(RaylibInternal.GL, RaylibInternal.Window.Size.X, RaylibInternal.Window.Size.Y);
 			RaylibInternal.Input = RaylibInternal.Window.CreateInput();
 			

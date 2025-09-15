@@ -1,4 +1,5 @@
-using Silk.NET.OpenGL;
+using Silk.NET.OpenGLES;
+using GL = Silk.NET.OpenGLES.GL;
 using FontStashSharp;
 using FontStashSharp.Interfaces;
 
@@ -16,19 +17,19 @@ namespace SilkRay
         public object CreateTexture(int width, int height)
         {
             uint textureId = _gl.GenTexture();
-            _gl.BindTexture(TextureTarget.Texture2D, textureId);
+            _gl.BindTexture(GLEnum.Texture2D, textureId);
 
             // Create empty texture with RGBA format
-            _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, 
+            _gl.TexImage2D(GLEnum.Texture2D, 0, InternalFormat.Rgba, 
                 (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, null);
 
             // Set texture parameters for font rendering
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Linear);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)GLEnum.ClampToEdge);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)GLEnum.ClampToEdge);
+            _gl.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Linear);
+            _gl.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
+            _gl.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureWrapS, (int)GLEnum.ClampToEdge);
+            _gl.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureWrapT, (int)GLEnum.ClampToEdge);
 
-            _gl.BindTexture(TextureTarget.Texture2D, 0);
+            _gl.BindTexture(GLEnum.Texture2D, 0);
 
             FontTexture texture = new(textureId, width, height);
             _textures[texture] = texture;
@@ -48,16 +49,16 @@ namespace SilkRay
         {
             if (_textures.TryGetValue(texture, out FontTexture? fontTexture))
             {
-                _gl.BindTexture(TextureTarget.Texture2D, fontTexture.Id);
+                _gl.BindTexture(GLEnum.Texture2D, fontTexture.Id);
 
                 fixed (byte* ptr = data)
                 {
-                    _gl.TexSubImage2D(TextureTarget.Texture2D, 0, 
+                    _gl.TexSubImage2D(GLEnum.Texture2D, 0, 
                         bounds.X, bounds.Y, (uint)bounds.Width, (uint)bounds.Height,
                         PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
                 }
 
-                _gl.BindTexture(TextureTarget.Texture2D, 0);
+                _gl.BindTexture(GLEnum.Texture2D, 0);
             }
         }
 

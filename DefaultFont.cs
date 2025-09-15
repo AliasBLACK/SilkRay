@@ -1,4 +1,5 @@
-using Silk.NET.OpenGL;
+using Silk.NET.OpenGLES;
+using GL = Silk.NET.OpenGLES.GL;
 
 namespace SilkRay
 {
@@ -119,22 +120,22 @@ namespace SilkRay
 
             // Create OpenGL texture
             uint textureId = gl.GenTexture();
-            gl.BindTexture(TextureTarget.Texture2D, textureId);
+            gl.BindTexture(GLEnum.Texture2D, textureId);
             
             fixed (byte* pixelPtr = pixels)
             {
-                gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba,
+                gl.TexImage2D(GLEnum.Texture2D, 0, InternalFormat.Rgba,
                     (uint)textureSize, (uint)textureSize, 0, 
                     PixelFormat.Rgba, PixelType.UnsignedByte, pixelPtr);
             }
             
             // Set texture parameters
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Nearest);
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Nearest);
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)GLEnum.ClampToEdge);
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)GLEnum.ClampToEdge);
+            gl.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Nearest);
+            gl.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Nearest);
+            gl.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureWrapS, (int)GLEnum.ClampToEdge);
+            gl.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureWrapT, (int)GLEnum.ClampToEdge);
             
-            gl.BindTexture(TextureTarget.Texture2D, 0);
+            gl.BindTexture(GLEnum.Texture2D, 0);
             
             return textureId;
         }

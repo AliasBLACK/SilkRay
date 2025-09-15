@@ -1,4 +1,5 @@
-using Silk.NET.OpenGL;
+using GL = Silk.NET.OpenGLES.GL;
+using Silk.NET.OpenGLES;
 using FontStashSharp;
 
 namespace SilkRay
@@ -31,48 +32,52 @@ namespace SilkRay
 			try
 			{
 				// Create shader for 2D rendering
-				const string vertexShader = @"#version 330 core
-					layout (location = 0) in vec2 aPosition;
-					uniform vec2 screenSize;
-					void main()
-					{
-						// Convert from pixel coordinates to NDC (-1 to 1)
-						vec2 pos = aPosition / screenSize;
-						gl_Position = vec4(pos.x * 2.0 - 1.0, 1.0 - pos.y * 2.0, 0.0, 1.0);
-					}";
+				const string vertexShader = @"#version 300 es
+				precision mediump float;
+				layout (location = 0) in vec2 aPosition;
+				uniform vec2 screenSize;
+				void main()
+				{
+					// Convert from pixel coordinates to NDC (-1 to 1)
+					vec2 pos = aPosition / screenSize;
+					gl_Position = vec4(pos.x * 2.0 - 1.0, 1.0 - pos.y * 2.0, 0.0, 1.0);
+				}";
 					
-				const string fragmentShader = @"#version 330 core
-					out vec4 FragColor;
-					uniform vec4 color;
-					void main()
-					{
-						FragColor = color;
-					}";
+				const string fragmentShader = @"#version 300 es
+				precision mediump float;
+				out vec4 FragColor;
+				uniform vec4 color;
+				void main()
+				{
+					FragColor = color;
+				}";
 
 				_shader = new(_gl, vertexShader, fragmentShader);
 
 				// Create texture shader
-				const string textureVertexShader = @"#version 330 core
-					layout (location = 0) in vec2 aPosition;
-					layout (location = 1) in vec2 aTexCoord;
-					uniform vec2 screenSize;
-					out vec2 TexCoord;
-					void main()
-					{
-						vec2 pos = aPosition / screenSize;
-						gl_Position = vec4(pos.x * 2.0 - 1.0, 1.0 - pos.y * 2.0, 0.0, 1.0);
-						TexCoord = aTexCoord;
-					}";
+				const string textureVertexShader = @"#version 300 es
+				precision mediump float;
+				layout (location = 0) in vec2 aPosition;
+				layout (location = 1) in vec2 aTexCoord;
+				uniform vec2 screenSize;
+				out vec2 TexCoord;
+				void main()
+				{
+					vec2 pos = aPosition / screenSize;
+					gl_Position = vec4(pos.x * 2.0 - 1.0, 1.0 - pos.y * 2.0, 0.0, 1.0);
+					TexCoord = aTexCoord;
+				}";
 					
-				const string textureFragmentShader = @"#version 330 core
-					out vec4 FragColor;
-					in vec2 TexCoord;
-					uniform sampler2D ourTexture;
-					uniform vec4 tintColor;
-					void main()
-					{
-						FragColor = texture(ourTexture, TexCoord) * tintColor;
-					}";
+				const string textureFragmentShader = @"#version 300 es
+				precision mediump float;
+				out vec4 FragColor;
+				in vec2 TexCoord;
+				uniform sampler2D ourTexture;
+				uniform vec4 tintColor;
+				void main()
+				{
+					FragColor = texture(ourTexture, TexCoord) * tintColor;
+				}";
 
 				_textureShader = new(_gl, textureVertexShader, textureFragmentShader);
 
@@ -82,7 +87,7 @@ namespace SilkRay
 				
 				_gl.BindVertexArray(_vao);
 				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
-				
+		
 				// Set up vertex attribute pointer
 				_gl.EnableVertexAttribArray(0);
 				_gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 2 * sizeof(float), (void*)0);
@@ -93,12 +98,12 @@ namespace SilkRay
 				
 				_gl.BindVertexArray(_textureVao);
 				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, _textureVbo);
-				
-				// Position (2 floats) + TexCoord (2 floats) = 4 floats per vertex
-				_gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), (void*)0);
-				_gl.EnableVertexAttribArray(0);
-				_gl.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-				_gl.EnableVertexAttribArray(1);
+		
+		// Position (2 floats) + TexCoord (2 floats) = 4 floats per vertex
+		_gl.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), (void*)0);
+		_gl.EnableVertexAttribArray(0);
+		_gl.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+		_gl.EnableVertexAttribArray(1);
 				
 				_gl.BindVertexArray(0);
 
@@ -108,9 +113,9 @@ namespace SilkRay
 				_gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
 				
 				// Enable blending for transparency
-				_gl.Enable(EnableCap.Blend);
-				_gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-				_gl.Disable(EnableCap.DepthTest);
+				_gl.Enable(GLEnum.Blend);
+				_gl.BlendFunc(GLEnum.SrcAlpha, GLEnum.OneMinusSrcAlpha);
+				_gl.Disable(GLEnum.DepthTest);
 			}
 			catch (Exception ex)
 			{
@@ -139,7 +144,7 @@ namespace SilkRay
 				
 			var c = color.ToVector4();
 			_gl.ClearColor(c.X, c.Y, c.Z, c.W);
-			_gl.Clear(ClearBufferMask.ColorBufferBit);
+			_gl.Clear((uint)GLEnum.ColorBufferBit);
 		}
 
 		public void DrawRectangle(float x, float y, float width, float height, Color color)
@@ -169,7 +174,7 @@ namespace SilkRay
 				_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v, BufferUsageARB.DynamicDraw);
 			}
 
-			_gl.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
+			_gl.DrawArrays(GLEnum.TriangleStrip, 0, 4);
 			
 			_gl.BindVertexArray(0);
 		}
@@ -218,9 +223,9 @@ namespace SilkRay
 			}
 
 			if (filled)
-				_gl.DrawArrays(PrimitiveType.TriangleFan, 0, segments + 1);
+				_gl.DrawArrays(GLEnum.TriangleFan, 0, segments + 1);
 			else
-				_gl.DrawArrays(PrimitiveType.LineLoop, 0, segments);
+				_gl.DrawArrays(GLEnum.LineLoop, 0, segments);
 			
 			_gl.BindVertexArray(0);
 		}
@@ -249,7 +254,7 @@ namespace SilkRay
 				_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v, BufferUsageARB.DynamicDraw);
 			}
 
-			_gl.DrawArrays(PrimitiveType.Lines, 0, 2);
+			_gl.DrawArrays(GLEnum.Lines, 0, 2);
 			
 			_gl.BindVertexArray(0);
 		}
@@ -296,7 +301,7 @@ namespace SilkRay
 				_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v, BufferUsageARB.DynamicDraw);
 			}
 
-			_gl.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
+			_gl.DrawArrays(GLEnum.TriangleStrip, 0, 4);
 			
 			_gl.BindVertexArray(0);
 		}
@@ -348,8 +353,8 @@ namespace SilkRay
 			_textureShader.SetUniform("tintColor", tint);
 
 			// Bind texture
-			_gl.ActiveTexture(TextureUnit.Texture0);
-			_gl.BindTexture(TextureTarget.Texture2D, texture.Id);
+			_gl.ActiveTexture(GLEnum.Texture0);
+			_gl.BindTexture(GLEnum.Texture2D, texture.Id);
 			_textureShader.SetUniform("ourTexture", 0);
 
 			// Upload vertex data and draw
@@ -361,10 +366,10 @@ namespace SilkRay
 				_gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), v, BufferUsageARB.DynamicDraw);
 			}
 
-			_gl.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
+			_gl.DrawArrays(GLEnum.TriangleStrip, 0, 4);
 			
 			_gl.BindVertexArray(0);
-			_gl.BindTexture(TextureTarget.Texture2D, 0);
+			_gl.BindTexture(GLEnum.Texture2D, 0);
 		}
 
 		// Bitmap font text rendering using default Raylib font

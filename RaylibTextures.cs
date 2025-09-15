@@ -1,4 +1,4 @@
-using Silk.NET.OpenGL;
+using Silk.NET.OpenGLES;
 using StbImageSharp;
 
 namespace SilkRay
@@ -26,28 +26,28 @@ namespace SilkRay
 
 				// Generate OpenGL texture
 				uint textureId = RaylibInternal.GL.GenTexture();
-				RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, textureId);
+				RaylibInternal.GL.BindTexture(GLEnum.Texture2D, textureId);
 
 				// Upload texture data
 				unsafe
 				{
 					fixed (byte* ptr = imageData)
 					{
-						RaylibInternal.GL.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba,
+						RaylibInternal.GL.TexImage2D(GLEnum.Texture2D, 0, InternalFormat.Rgba,
 							(uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
 					}
 				}
 
 				// Generate mipmaps for advanced filtering support
-				RaylibInternal.GL.GenerateMipmap(TextureTarget.Texture2D);
+				RaylibInternal.GL.GenerateMipmap(GLEnum.Texture2D);
 
 				// Set default texture parameters
-				RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
-				RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
-				RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)GLEnum.ClampToEdge);
-				RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)GLEnum.ClampToEdge);
+				RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
+				RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
+				RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureWrapS, (int)GLEnum.ClampToEdge);
+				RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureWrapT, (int)GLEnum.ClampToEdge);
 
-				RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, 0);
+				RaylibInternal.GL.BindTexture(GLEnum.Texture2D, 0);
 
 				// Calculate mipmap levels
 				int mipmapLevels = (int)Math.Floor(Math.Log2(Math.Max(width, height))) + 1;
@@ -85,20 +85,20 @@ namespace SilkRay
 			try
 			{
 				// Bind the texture
-				RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, texture.Id);
+				RaylibInternal.GL.BindTexture(GLEnum.Texture2D, texture.Id);
 
 				// Update texture data
 				unsafe
 				{
 					fixed (byte* ptr = pixels)
 					{
-						RaylibInternal.GL.TexSubImage2D(TextureTarget.Texture2D, 0, 0, 0,
+						RaylibInternal.GL.TexSubImage2D(GLEnum.Texture2D, 0, 0, 0,
 							(uint)texture.Width, (uint)texture.Height, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
 					}
 				}
 
 				// Unbind texture
-				RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, 0);
+				RaylibInternal.GL.BindTexture(GLEnum.Texture2D, 0);
 			}
 			catch (Exception ex)
 			{
@@ -287,7 +287,7 @@ namespace SilkRay
 					byte* extensionsPtr = RaylibInternal.GL.GetString(StringName.Extensions);
 					if (extensionsPtr == null) return false;
 					
-					string extensions = System.Runtime.InteropServices.Marshal.PtrToStringAnsi((IntPtr)extensionsPtr);
+					string? extensions = System.Runtime.InteropServices.Marshal.PtrToStringAnsi((IntPtr)extensionsPtr);
 					return extensions != null && extensions.Contains("GL_EXT_texture_filter_anisotropic");
 				}
 			}
@@ -308,21 +308,21 @@ namespace SilkRay
 
 			try
 			{
-				RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, texture.Id);
+				RaylibInternal.GL.BindTexture(GLEnum.Texture2D, texture.Id);
 				
 				switch (filter)
 				{
 					case TEXTURE_FILTER_POINT:
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Nearest);
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Nearest);
+						RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Nearest);
+						RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Nearest);
 						break;
 					case TEXTURE_FILTER_BILINEAR:
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Linear);
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
+						RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Linear);
+						RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
 						break;
 					case TEXTURE_FILTER_TRILINEAR:
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
-						RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
+						RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
+						RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
 						break;
 					case TEXTURE_FILTER_ANISOTROPIC_4X:
 					case TEXTURE_FILTER_ANISOTROPIC_8X:
@@ -330,8 +330,8 @@ namespace SilkRay
 						// Check if anisotropic filtering is supported
 						if (IsAnisotropicFilteringSupported())
 						{
-							RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
-							RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
+							RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
+							RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
 							
 							float anisotropy = filter switch
 							{
@@ -341,19 +341,19 @@ namespace SilkRay
 								_ => 4.0f
 							};
 							
-							RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxAnisotropy, anisotropy);
+							RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMaxAnisotropy, anisotropy);
 						}
 						else
 						{
 							Console.WriteLine($"Warning: Anisotropic filtering not supported, falling back to trilinear");
 							// Fallback to trilinear filtering
-							RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
-							RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
+							RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.LinearMipmapLinear);
+							RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
 						}
 						break;
 				}
 				
-				RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, 0);
+				RaylibInternal.GL.BindTexture(GLEnum.Texture2D, 0);
 			}
 			catch (Exception ex)
 			{
@@ -371,21 +371,21 @@ namespace SilkRay
 
 			try
 			{
-				RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, texture.Id);
+				RaylibInternal.GL.BindTexture(GLEnum.Texture2D, texture.Id);
 				
 				int wrapMode = wrap switch
 				{
 					TEXTURE_WRAP_REPEAT => (int)GLEnum.Repeat,
 					TEXTURE_WRAP_CLAMP => (int)GLEnum.ClampToEdge,
 					TEXTURE_WRAP_MIRROR_REPEAT => (int)GLEnum.MirroredRepeat,
-					TEXTURE_WRAP_MIRROR_CLAMP => (int)GLEnum.MirrorClampToEdge,
+					TEXTURE_WRAP_MIRROR_CLAMP => (int)GLEnum.ClampToEdge, // MirrorClampToEdge not available in OpenGL ES
 					_ => (int)GLEnum.Repeat
 				};
 				
-				RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, wrapMode);
-				RaylibInternal.GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, wrapMode);
+				RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureWrapS, wrapMode);
+				RaylibInternal.GL.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureWrapT, wrapMode);
 				
-				RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, 0);
+				RaylibInternal.GL.BindTexture(GLEnum.Texture2D, 0);
 			}
 			catch (Exception ex)
 			{
@@ -403,9 +403,9 @@ namespace SilkRay
 
 			try
 			{
-				RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, texture.Id);
-				RaylibInternal.GL.GenerateMipmap(TextureTarget.Texture2D);
-				RaylibInternal.GL.BindTexture(TextureTarget.Texture2D, 0);
+				RaylibInternal.GL.BindTexture(GLEnum.Texture2D, texture.Id);
+				RaylibInternal.GL.GenerateMipmap(GLEnum.Texture2D);
+				RaylibInternal.GL.BindTexture(GLEnum.Texture2D, 0);
 				
 				Console.WriteLine($"Generated mipmaps for texture ID {texture.Id}");
 			}

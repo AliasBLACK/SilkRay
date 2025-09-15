@@ -1,4 +1,5 @@
-using Silk.NET.OpenGL;
+using Silk.NET.OpenGLES;
+using GL = Silk.NET.OpenGLES.GL;
 using System.Numerics;
 
 namespace SilkRay
