@@ -59,6 +59,16 @@ namespace SilkRay
 		public static Dictionary<int, Dictionary<int, bool>> CurrentGamepadButtonState = new();
 		public static Dictionary<int, Dictionary<int, bool>> PreviousGamepadButtonState = new();
 		public static int LastGamepadButtonPressed = -1;
+		
+		// Mouse input state tracking
+		public static Dictionary<int, bool> CurrentMouseButtonState = new();
+		public static Dictionary<int, bool> PreviousMouseButtonState = new();
+		public static Vector2 CurrentMousePosition = Vector2.Zero;
+		public static Vector2 PreviousMousePosition = Vector2.Zero;
+		public static Vector2 MouseOffset = Vector2.Zero;
+		public static Vector2 MouseScale = Vector2.One;
+		public static Vector2 MouseWheelMove = Vector2.Zero;
+		public static int CurrentMouseCursor = 0;
 	}
 
 	/// <summary>
@@ -173,6 +183,9 @@ namespace SilkRay
 				RaylibInternal.PreviousKeyState[kvp.Key] = kvp.Value;
 			}
 			
+			// Update mouse state
+			UpdateMouseState();
+			
 			// Update gamepad state
 			UpdateGamepadState();
 		}
@@ -192,6 +205,44 @@ namespace SilkRay
 			
 			// Update trigger button states based on current analog values
 			UpdateTriggerButtonStates();
+		}
+		
+		private static void UpdateMouseState()
+		{
+			// Copy current mouse button state to previous state
+			RaylibInternal.PreviousMouseButtonState.Clear();
+			foreach (var kvp in RaylibInternal.CurrentMouseButtonState)
+			{
+				RaylibInternal.PreviousMouseButtonState[kvp.Key] = kvp.Value;
+			}
+			
+			// Update mouse position
+			RaylibInternal.PreviousMousePosition = RaylibInternal.CurrentMousePosition;
+			
+			if (RaylibInternal.Input != null)
+			{
+				// Update current mouse position from input
+				var mice = RaylibInternal.Input.Mice;
+				if (mice.Count > 0)
+				{
+					var mouse = mice[0];
+					RaylibInternal.CurrentMousePosition = new Vector2(mouse.Position.X, mouse.Position.Y);
+					
+					// Apply mouse offset and scale
+					var offsetPosition = RaylibInternal.CurrentMousePosition + RaylibInternal.MouseOffset;
+					RaylibInternal.CurrentMousePosition = new Vector2(offsetPosition.X * RaylibInternal.MouseScale.X, offsetPosition.Y * RaylibInternal.MouseScale.Y);
+					
+					// Update mouse button states
+					for (int i = 0; i < mouse.SupportedButtons.Count && i < 7; i++)
+					{
+						RaylibInternal.CurrentMouseButtonState[i] = mouse.IsButtonPressed((Silk.NET.Input.MouseButton)i);
+					}
+					
+					// Update mouse wheel
+					RaylibInternal.MouseWheelMove = new Vector2(mouse.ScrollWheels.Count > 0 ? mouse.ScrollWheels[0].X : 0,
+															   mouse.ScrollWheels.Count > 0 ? mouse.ScrollWheels[0].Y : 0);
+				}
+			}
 		}
 		
 		private static void UpdateTriggerButtonStates()
@@ -290,6 +341,16 @@ namespace SilkRay
 			RaylibInternal.CurrentGamepadButtonState.Clear();
 			RaylibInternal.PreviousGamepadButtonState.Clear();
 			RaylibInternal.LastGamepadButtonPressed = -1;
+			
+			// Reset mouse state
+			RaylibInternal.CurrentMouseButtonState.Clear();
+			RaylibInternal.PreviousMouseButtonState.Clear();
+			RaylibInternal.CurrentMousePosition = Vector2.Zero;
+			RaylibInternal.PreviousMousePosition = Vector2.Zero;
+			RaylibInternal.MouseOffset = Vector2.Zero;
+			RaylibInternal.MouseScale = Vector2.One;
+			RaylibInternal.MouseWheelMove = Vector2.Zero;
+			RaylibInternal.CurrentMouseCursor = 0;
 			
 			// Reset flags for next window
 			RaylibInternal.ShouldClose = false;
@@ -1096,6 +1157,142 @@ namespace SilkRay
 			return false;
 		}
 
+		// Input-related functions: mouse
+		public static bool IsMouseButtonPressed(int button)
+		{
+			bool currentState = RaylibInternal.CurrentMouseButtonState.GetValueOrDefault(button, false);
+			bool previousState = RaylibInternal.PreviousMouseButtonState.GetValueOrDefault(button, false);
+			return currentState && !previousState;
+		}
+
+		public static bool IsMouseButtonDown(int button)
+		{
+			return RaylibInternal.CurrentMouseButtonState.GetValueOrDefault(button, false);
+		}
+
+		public static bool IsMouseButtonReleased(int button)
+		{
+			bool currentState = RaylibInternal.CurrentMouseButtonState.GetValueOrDefault(button, false);
+			bool previousState = RaylibInternal.PreviousMouseButtonState.GetValueOrDefault(button, false);
+			return !currentState && previousState;
+		}
+
+		public static bool IsMouseButtonUp(int button)
+		{
+			return !RaylibInternal.CurrentMouseButtonState.GetValueOrDefault(button, false);
+		}
+
+		public static int GetMouseX()
+		{
+			return (int)RaylibInternal.CurrentMousePosition.X;
+		}
+
+		public static int GetMouseY()
+		{
+			return (int)RaylibInternal.CurrentMousePosition.Y;
+		}
+
+		public static Vector2 GetMousePosition()
+		{
+			return RaylibInternal.CurrentMousePosition;
+		}
+
+		public static Vector2 GetMouseDelta()
+		{
+			return RaylibInternal.CurrentMousePosition - RaylibInternal.PreviousMousePosition;
+		}
+
+		public static void SetMousePosition(int x, int y)
+		{
+			try
+			{
+				unsafe
+				{
+					EnsureGlfwInitialized();
+					var glfw = Glfw.GetApi();
+					
+					if (RaylibInternal.Window?.Native?.Glfw is { } glfwHandle)
+					{
+						var windowHandle = (WindowHandle*)glfwHandle!;
+						glfw.SetCursorPos(windowHandle, x, y);
+						
+						// Update internal position immediately
+						RaylibInternal.CurrentMousePosition = new Vector2(x, y);
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error setting mouse position: {ex.Message}");
+			}
+		}
+
+		public static void SetMouseOffset(int offsetX, int offsetY)
+		{
+			RaylibInternal.MouseOffset = new Vector2(offsetX, offsetY);
+		}
+
+		public static void SetMouseScale(float scaleX, float scaleY)
+		{
+			RaylibInternal.MouseScale = new Vector2(scaleX, scaleY);
+		}
+
+		public static float GetMouseWheelMove()
+		{
+			// Return the larger of X or Y wheel movement
+			return Math.Abs(RaylibInternal.MouseWheelMove.X) > Math.Abs(RaylibInternal.MouseWheelMove.Y) 
+				? RaylibInternal.MouseWheelMove.X 
+				: RaylibInternal.MouseWheelMove.Y;
+		}
+
+		public static Vector2 GetMouseWheelMoveV()
+		{
+			return RaylibInternal.MouseWheelMove;
+		}
+
+		public static void SetMouseCursor(int cursor)
+		{
+			try
+			{
+				unsafe
+				{
+					EnsureGlfwInitialized();
+					var glfw = Glfw.GetApi();
+					
+					if (RaylibInternal.Window?.Native?.Glfw is { } glfwHandle)
+					{
+						var windowHandle = (WindowHandle*)glfwHandle!;
+						
+						// Map Raylib cursor constants to GLFW cursor shapes
+						CursorShape glfwCursor = cursor switch
+						{
+							0 => CursorShape.Arrow,        // MOUSE_CURSOR_DEFAULT
+							1 => CursorShape.Arrow,        // MOUSE_CURSOR_ARROW
+							2 => CursorShape.IBeam,        // MOUSE_CURSOR_IBEAM
+							3 => CursorShape.Crosshair,    // MOUSE_CURSOR_CROSSHAIR
+							4 => CursorShape.Hand,         // MOUSE_CURSOR_POINTING_HAND
+							5 => CursorShape.HResize,      // MOUSE_CURSOR_RESIZE_EW
+							6 => CursorShape.VResize,      // MOUSE_CURSOR_RESIZE_NS
+							7 => CursorShape.NwseResize,   // MOUSE_CURSOR_RESIZE_NWSE (no direct equivalent)
+							8 => CursorShape.NeswResize,   // MOUSE_CURSOR_RESIZE_NESW (no direct equivalent)
+							9 => CursorShape.AllResize,    // MOUSE_CURSOR_RESIZE_ALL (no direct equivalent)
+							10 => CursorShape.NotAllowed,  // MOUSE_CURSOR_NOT_ALLOWED (no direct equivalent)
+							_ => CursorShape.Arrow
+						};
+						
+						var glfwCursorHandle = glfw.CreateStandardCursor(glfwCursor);
+						glfw.SetCursor(windowHandle, glfwCursorHandle);
+						
+						RaylibInternal.CurrentMouseCursor = cursor;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error setting mouse cursor: {ex.Message}");
+			}
+		}
+
 		// Drawing-related functions (rcore)
 		public static void BeginDrawing()
 		{
@@ -1313,28 +1510,6 @@ namespace SilkRay
 			RaylibInternal.ExitKey = key;
 		}
 
-		public static Vector2 GetMousePosition()
-		{
-			if (RaylibInternal.Input == null) return Vector2.Zero;
-			
-			var mice = RaylibInternal.Input.Mice;
-			if (mice.Count == 0) return Vector2.Zero;
-			
-			var mouse = mice[0];
-			return new Vector2(mouse.Position.X, mouse.Position.Y);
-		}
-
-		public static bool IsMouseButtonPressed(int button)
-		{
-			if (RaylibInternal.Input == null) return false;
-			
-			var mice = RaylibInternal.Input.Mice;
-			if (mice.Count == 0) return false;
-			
-			var mouse = mice[0];
-			
-			return mouse.IsButtonPressed((Silk.NET.Input.MouseButton)button);
-		}
 
 		// Gamepad input functions
 		public static bool IsGamepadAvailable(int gamepad)
