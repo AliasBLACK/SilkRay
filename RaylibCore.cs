@@ -1,4 +1,4 @@
-global using static SilkRay.RaylibAPI;
+global using static SilkRay.RaylibCore;
 global using static SilkRay.RaylibShapes;
 global using static SilkRay.RaylibTextures;
 global using static SilkRay.KeyboardKeys;
@@ -49,7 +49,7 @@ namespace SilkRay
 	/// <summary>
 	/// Core Raylib functions implementation using Silk.NET
 	/// </summary>
-	public static class RaylibAPI
+	public static class RaylibCore
 	{
 		// Helper function to ensure GLFW is initialized
 		private static unsafe void EnsureGlfwInitialized()
