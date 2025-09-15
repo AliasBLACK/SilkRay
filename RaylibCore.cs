@@ -16,6 +16,7 @@ using Silk.NET.Input;
 using TextCopy;
 using StbImageSharp;
 using FontStashSharp;
+using System.IO;
 
 namespace SilkRay
 {
@@ -45,6 +46,9 @@ namespace SilkRay
 		public static Queue<int> KeyPressedQueue = new();
 		public static Queue<int> CharPressedQueue = new();
 		public static int ExitKey = KEY_ESCAPE;
+		
+		// File drop handling
+		public static List<string> DroppedFiles = new();
 	}
 
 	/// <summary>
@@ -1201,6 +1205,247 @@ namespace SilkRay
 			var mouse = mice[0];
 			
 			return mouse.IsButtonPressed((Silk.NET.Input.MouseButton)button);
+		}
+
+		// File system functions
+		public static bool FileExists(string fileName)
+		{
+			return File.Exists(fileName);
+		}
+
+		public static bool DirectoryExists(string dirPath)
+		{
+			return Directory.Exists(dirPath);
+		}
+
+		public static bool IsFileExtension(string fileName, string ext)
+		{
+			if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(ext))
+				return false;
+			
+			string fileExt = Path.GetExtension(fileName);
+			return string.Equals(fileExt, ext, StringComparison.OrdinalIgnoreCase);
+		}
+
+		public static int GetFileLength(string fileName)
+		{
+			if (!File.Exists(fileName))
+				return 0;
+			
+			try
+			{
+				var fileInfo = new FileInfo(fileName);
+				return (int)fileInfo.Length;
+			}
+			catch
+			{
+				return 0;
+			}
+		}
+
+		public static string GetFileExtension(string fileName)
+		{
+			if (string.IsNullOrEmpty(fileName))
+				return string.Empty;
+			
+			return Path.GetExtension(fileName);
+		}
+
+		public static string GetFileName(string filePath)
+		{
+			if (string.IsNullOrEmpty(filePath))
+				return string.Empty;
+			
+			return Path.GetFileName(filePath);
+		}
+
+		public static string GetFileNameWithoutExt(string filePath)
+		{
+			if (string.IsNullOrEmpty(filePath))
+				return string.Empty;
+			
+			return Path.GetFileNameWithoutExtension(filePath);
+		}
+
+		public static string GetDirectoryPath(string filePath)
+		{
+			if (string.IsNullOrEmpty(filePath))
+				return string.Empty;
+			
+			string? dir = Path.GetDirectoryName(filePath);
+			return dir ?? string.Empty;
+		}
+
+		public static string GetPrevDirectoryPath(string dirPath)
+		{
+			if (string.IsNullOrEmpty(dirPath))
+				return string.Empty;
+			
+			try
+			{
+				DirectoryInfo? parent = Directory.GetParent(dirPath);
+				return parent?.FullName ?? string.Empty;
+			}
+			catch
+			{
+				return string.Empty;
+			}
+		}
+
+		public static string GetWorkingDirectory()
+		{
+			return Directory.GetCurrentDirectory();
+		}
+
+		public static string GetApplicationDirectory()
+		{
+			return AppDomain.CurrentDomain.BaseDirectory;
+		}
+
+		public static int MakeDirectory(string dirPath)
+		{
+			if (string.IsNullOrEmpty(dirPath))
+				return -1;
+			
+			try
+			{
+				Directory.CreateDirectory(dirPath);
+				return 0;
+			}
+			catch
+			{
+				return -1;
+			}
+		}
+
+		public static bool ChangeDirectory(string dir)
+		{
+			if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
+				return false;
+			
+			try
+			{
+				Directory.SetCurrentDirectory(dir);
+				return true;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		public static bool IsPathFile(string path)
+		{
+			if (string.IsNullOrEmpty(path))
+				return false;
+			
+			return File.Exists(path);
+		}
+
+		public static bool IsFileNameValid(string fileName)
+		{
+			if (string.IsNullOrEmpty(fileName))
+				return false;
+			
+			try
+			{
+				char[] invalidChars = Path.GetInvalidFileNameChars();
+				return fileName.IndexOfAny(invalidChars) == -1;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		public static FilePathList LoadDirectoryFiles(string dirPath)
+		{
+			return LoadDirectoryFilesEx(dirPath, "*", false);
+		}
+
+		public static FilePathList LoadDirectoryFilesEx(string basePath, string filter, bool scanSubdirs)
+		{
+			var fileList = new FilePathList();
+			
+			if (string.IsNullOrEmpty(basePath) || !Directory.Exists(basePath))
+				return fileList;
+			
+			try
+			{
+				SearchOption searchOption = scanSubdirs ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+				
+				// Handle special "DIR" filter to include directories
+				bool includeDirs = filter.Contains("DIR");
+				string actualFilter = filter.Replace("DIR", "").Trim();
+				if (string.IsNullOrEmpty(actualFilter))
+					actualFilter = "*";
+				
+				var files = new List<string>();
+				
+				// Add files
+				files.AddRange(Directory.GetFiles(basePath, actualFilter, searchOption));
+				
+				// Add directories if requested
+				if (includeDirs)
+				{
+					files.AddRange(Directory.GetDirectories(basePath, "*", searchOption));
+				}
+				
+				fileList.capacity = files.Count;
+				fileList.count = files.Count;
+				fileList.paths = files.ToArray();
+			}
+			catch
+			{
+				// Return empty list on error
+			}
+			
+			return fileList;
+		}
+
+		public static void UnloadDirectoryFiles(FilePathList files)
+		{
+			// In C#, garbage collection handles memory management
+			// This function exists for API compatibility
+		}
+
+		public static bool IsFileDropped()
+		{
+			return RaylibInternal.DroppedFiles.Count > 0;
+		}
+
+		public static FilePathList LoadDroppedFiles()
+		{
+			var fileList = new FilePathList
+			{
+				capacity = RaylibInternal.DroppedFiles.Count,
+				count = RaylibInternal.DroppedFiles.Count,
+				paths = RaylibInternal.DroppedFiles.ToArray()
+			};
+			
+			return fileList;
+		}
+
+		public static void UnloadDroppedFiles(FilePathList files)
+		{
+			RaylibInternal.DroppedFiles.Clear();
+		}
+
+		public static long GetFileModTime(string fileName)
+		{
+			if (!File.Exists(fileName))
+				return 0;
+			
+			try
+			{
+				var fileInfo = new FileInfo(fileName);
+				// Return Unix timestamp
+				return ((DateTimeOffset)fileInfo.LastWriteTime).ToUnixTimeSeconds();
+			}
+			catch
+			{
+				return 0;
+			}
 		}
 	}
 }

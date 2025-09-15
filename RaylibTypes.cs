@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using FontStashSharp;
+using System.Collections.Generic;
 
 namespace SilkRay
 {
@@ -385,5 +386,26 @@ namespace SilkRay
 		public const int FLAG_BORDERLESS_WINDOWED_MODE = 0x00008000; // Set to run program in borderless windowed mode
 		public const int FLAG_MSAA_4X_HINT = 0x00000020;         // Set to try enabling MSAA 4X
 		public const int FLAG_INTERLACED_HINT = 0x00010000;      // Set to try enabling interlaced video format (for V3D)
+	}
+
+	// ================================
+	// FILE SYSTEM STRUCTURES
+	// ================================
+
+	/// <summary>
+	/// File path list structure for directory operations
+	/// </summary>
+	public struct FilePathList
+	{
+		public int capacity;        // Filepaths max entries
+		public int count;           // Filepaths entries count
+		public string[] paths;      // Filepaths entries
+
+		public FilePathList()
+		{
+			capacity = 0;
+			count = 0;
+			paths = Array.Empty<string>();
+		}
 	}
 }
