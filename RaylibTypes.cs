@@ -389,6 +389,49 @@ namespace SilkRay
 	}
 
 	// ================================
+	// GAMEPAD BUTTON CONSTANTS
+	// ================================
+
+	/// <summary>
+	/// Gamepad button constants for standard controllers
+	/// </summary>
+	public static class GamepadButton
+	{
+		// Face buttons (right side)
+		public const int GAMEPAD_BUTTON_UNKNOWN = -1;			// Unknown button = ; just for error checking
+		public const int GAMEPAD_BUTTON_LEFT_FACE_UP = 11;		// Gamepad left DPAD up button
+		public const int GAMEPAD_BUTTON_LEFT_FACE_RIGHT = 12;	// Gamepad left DPAD right button
+		public const int GAMEPAD_BUTTON_LEFT_FACE_DOWN = 13;	// Gamepad left DPAD down button
+		public const int GAMEPAD_BUTTON_LEFT_FACE_LEFT = 14;	// Gamepad left DPAD left button
+		public const int GAMEPAD_BUTTON_RIGHT_FACE_UP = 3;		// Gamepad right button up (i.e. PS3: Triangle = ; Xbox: Y)
+		public const int GAMEPAD_BUTTON_RIGHT_FACE_RIGHT = 1;	// Gamepad right button right (i.e. PS3: Circle = ; Xbox: B)
+		public const int GAMEPAD_BUTTON_RIGHT_FACE_DOWN = 0;	// Gamepad right button down (i.e. PS3: Cross = ; Xbox: A)
+		public const int GAMEPAD_BUTTON_RIGHT_FACE_LEFT = 2;	// Gamepad right button left (i.e. PS3: Square = ; Xbox: X)
+		public const int GAMEPAD_BUTTON_LEFT_TRIGGER_1 = 4;		// Gamepad top/back trigger left (first) = ; it could be a trailing button
+		public const int GAMEPAD_BUTTON_LEFT_TRIGGER_2 = 15;	// Gamepad top/back trigger left (second) = ; it could be a trailing button
+		public const int GAMEPAD_BUTTON_RIGHT_TRIGGER_1 = 5;	// Gamepad top/back trigger right (first) = ; it could be a trailing button
+		public const int GAMEPAD_BUTTON_RIGHT_TRIGGER_2 = 16;	// Gamepad top/back trigger right (second) = ; it could be a trailing button
+		public const int GAMEPAD_BUTTON_MIDDLE_LEFT = 6;		// Gamepad center buttons = ; left one (i.e. PS3: Select)
+		public const int GAMEPAD_BUTTON_MIDDLE = 8;				// Gamepad center buttons = ; middle one (i.e. PS3: PS = ; Xbox: XBOX)
+		public const int GAMEPAD_BUTTON_MIDDLE_RIGHT = 7;		// Gamepad center buttons = ; right one (i.e. PS3: Start)
+		public const int GAMEPAD_BUTTON_LEFT_THUMB = 9;			// Gamepad joystick pressed button left
+		public const int GAMEPAD_BUTTON_RIGHT_THUMB = 10;		// Gamepad joystick pressed button right
+	}
+
+	/// <summary>
+	/// Gamepad axis constants for analog inputs
+	/// </summary>
+	public static class GamepadAxis
+	{
+		public const int GAMEPAD_AXIS_LEFT_X = 0;        // Left stick X axis
+		public const int GAMEPAD_AXIS_LEFT_Y = 1;        // Left stick Y axis
+		public const int GAMEPAD_AXIS_RIGHT_X = 2;       // Right stick X axis
+		public const int GAMEPAD_AXIS_RIGHT_Y = 3;       // Right stick Y axis
+		public const int GAMEPAD_AXIS_LEFT_TRIGGER = 4;  // Left trigger axis
+		public const int GAMEPAD_AXIS_RIGHT_TRIGGER = 5; // Right trigger axis
+	}
+
+	// ================================
 	// FILE SYSTEM STRUCTURES
 	// ================================
 

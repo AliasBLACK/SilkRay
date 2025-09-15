@@ -8,6 +8,8 @@ global using static SilkRay.MouseButton;
 global using static SilkRay.MouseCursor;
 global using static SilkRay.TextureFilter;
 global using static SilkRay.TextureWrap;
+global using static SilkRay.GamepadButton;
+global using static SilkRay.GamepadAxis;
 
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -52,6 +54,11 @@ namespace SilkRay
 		
 		// File drop handling
 		public static List<string> DroppedFiles = new();
+		
+		// Gamepad input state tracking
+		public static Dictionary<int, Dictionary<int, bool>> CurrentGamepadButtonState = new();
+		public static Dictionary<int, Dictionary<int, bool>> PreviousGamepadButtonState = new();
+		public static int LastGamepadButtonPressed = -1;
 	}
 
 	/// <summary>
@@ -165,6 +172,79 @@ namespace SilkRay
 			{
 				RaylibInternal.PreviousKeyState[kvp.Key] = kvp.Value;
 			}
+			
+			// Update gamepad state
+			UpdateGamepadState();
+		}
+
+		private static void UpdateGamepadState()
+		{
+			// Copy current gamepad state to previous state
+			RaylibInternal.PreviousGamepadButtonState.Clear();
+			foreach (var gamepadKvp in RaylibInternal.CurrentGamepadButtonState)
+			{
+				RaylibInternal.PreviousGamepadButtonState[gamepadKvp.Key] = new Dictionary<int, bool>();
+				foreach (var buttonKvp in gamepadKvp.Value)
+				{
+					RaylibInternal.PreviousGamepadButtonState[gamepadKvp.Key][buttonKvp.Key] = buttonKvp.Value;
+				}
+			}
+			
+			// Update trigger button states based on current analog values
+			UpdateTriggerButtonStates();
+		}
+		
+		private static void UpdateTriggerButtonStates()
+		{
+			if (RaylibInternal.Input == null) return;
+			
+			const float triggerThreshold = 0.1f; // Lower threshold for better responsiveness
+			
+			for (int gamepadIndex = 0; gamepadIndex < RaylibInternal.Input.Gamepads.Count; gamepadIndex++)
+			{
+				var gamepad = RaylibInternal.Input.Gamepads[gamepadIndex];
+				if (!gamepad.IsConnected) continue;
+				
+				// Initialize gamepad state if not exists
+				if (!RaylibInternal.CurrentGamepadButtonState.ContainsKey(gamepadIndex))
+				{
+					RaylibInternal.CurrentGamepadButtonState[gamepadIndex] = new Dictionary<int, bool>();
+				}
+				
+				var currentState = RaylibInternal.CurrentGamepadButtonState[gamepadIndex];
+				
+				// Update left trigger (LT/L2) button state
+				if (gamepad.Triggers.Count > 0)
+				{
+					float leftTriggerValue = gamepad.Triggers[0].Position;
+					bool leftTriggerPressed = leftTriggerValue > triggerThreshold;
+					bool wasPressed = currentState.GetValueOrDefault(GAMEPAD_BUTTON_LEFT_TRIGGER_2, false);
+					
+					currentState[GAMEPAD_BUTTON_LEFT_TRIGGER_2] = leftTriggerPressed;
+					
+					// Track button press for GetGamepadButtonPressed()
+					if (leftTriggerPressed && !wasPressed)
+					{
+						RaylibInternal.LastGamepadButtonPressed = GAMEPAD_BUTTON_LEFT_TRIGGER_2;
+					}
+				}
+				
+				// Update right trigger (RT/R2) button state
+				if (gamepad.Triggers.Count > 1)
+				{
+					float rightTriggerValue = gamepad.Triggers[1].Position;
+					bool rightTriggerPressed = rightTriggerValue > triggerThreshold;
+					bool wasPressed = currentState.GetValueOrDefault(GAMEPAD_BUTTON_RIGHT_TRIGGER_2, false);
+					
+					currentState[GAMEPAD_BUTTON_RIGHT_TRIGGER_2] = rightTriggerPressed;
+					
+					// Track button press for GetGamepadButtonPressed()
+					if (rightTriggerPressed && !wasPressed)
+					{
+						RaylibInternal.LastGamepadButtonPressed = GAMEPAD_BUTTON_RIGHT_TRIGGER_2;
+					}
+				}
+			}
 		}
 
 		public static void CloseWindow()
@@ -205,6 +285,11 @@ namespace SilkRay
 			RaylibInternal.PreviousKeyState.Clear();
 			RaylibInternal.KeyPressedQueue.Clear();
 			RaylibInternal.CharPressedQueue.Clear();
+			
+			// Reset gamepad state
+			RaylibInternal.CurrentGamepadButtonState.Clear();
+			RaylibInternal.PreviousGamepadButtonState.Clear();
+			RaylibInternal.LastGamepadButtonPressed = -1;
 			
 			// Reset flags for next window
 			RaylibInternal.ShouldClose = false;
@@ -1071,6 +1156,18 @@ namespace SilkRay
 				keyboard.KeyChar += OnKeyChar;
 			}
 			
+			// Set up gamepad event handlers
+			if (RaylibInternal.Input != null)
+			{
+				for (int i = 0; i < RaylibInternal.Input.Gamepads.Count; i++)
+				{
+					var gamepad = RaylibInternal.Input.Gamepads[i];
+					int gamepadIndex = i;
+					gamepad.ButtonDown += (g, button) => OnGamepadButtonDown(gamepadIndex, button.Index);
+					gamepad.ButtonUp += (g, button) => OnGamepadButtonUp(gamepadIndex, button.Index);
+				}
+			}
+			
 			// Initialize font system
 			RaylibText.InitializeFontSystem();
 		}
@@ -1118,6 +1215,35 @@ namespace SilkRay
 		private static void OnKeyChar(IKeyboard keyboard, char character)
 		{
 			RaylibInternal.CharPressedQueue.Enqueue((int)character);
+		}
+
+		private static void OnGamepadButtonDown(int gamepadIndex, int button)
+		{
+			// Initialize gamepad state if not exists
+			if (!RaylibInternal.CurrentGamepadButtonState.ContainsKey(gamepadIndex))
+			{
+				RaylibInternal.CurrentGamepadButtonState[gamepadIndex] = new Dictionary<int, bool>();
+				RaylibInternal.PreviousGamepadButtonState[gamepadIndex] = new Dictionary<int, bool>();
+			}
+
+			// Update current button state
+			RaylibInternal.CurrentGamepadButtonState[gamepadIndex][button] = true;
+			
+			// Track last pressed button
+			RaylibInternal.LastGamepadButtonPressed = button;
+		}
+
+		private static void OnGamepadButtonUp(int gamepadIndex, int button)
+		{
+			// Initialize gamepad state if not exists
+			if (!RaylibInternal.CurrentGamepadButtonState.ContainsKey(gamepadIndex))
+			{
+				RaylibInternal.CurrentGamepadButtonState[gamepadIndex] = new Dictionary<int, bool>();
+				RaylibInternal.PreviousGamepadButtonState[gamepadIndex] = new Dictionary<int, bool>();
+			}
+
+			// Update current button state
+			RaylibInternal.CurrentGamepadButtonState[gamepadIndex][button] = false;
 		}
 
 		// Input functions (basic)
@@ -1208,6 +1334,153 @@ namespace SilkRay
 			var mouse = mice[0];
 			
 			return mouse.IsButtonPressed((Silk.NET.Input.MouseButton)button);
+		}
+
+		// Gamepad input functions
+		public static bool IsGamepadAvailable(int gamepad)
+		{
+			if (RaylibInternal.Input == null) return false;
+			
+			return gamepad >= 0 && gamepad < RaylibInternal.Input.Gamepads.Count && 
+				   RaylibInternal.Input.Gamepads[gamepad].IsConnected;
+		}
+
+		public static string GetGamepadName(int gamepad)
+		{
+			if (!IsGamepadAvailable(gamepad)) return string.Empty;
+			
+			return RaylibInternal.Input.Gamepads[gamepad].Name ?? $"Gamepad {gamepad}";
+		}
+
+		public static bool IsGamepadButtonPressed(int gamepad, int button)
+		{
+			if (!IsGamepadAvailable(gamepad)) return false;
+			
+			// Check if button was just pressed (down now, but not down in previous frame)
+			bool currentState = RaylibInternal.CurrentGamepadButtonState
+				.GetValueOrDefault(gamepad, new Dictionary<int, bool>())
+				.GetValueOrDefault(button, false);
+			bool previousState = RaylibInternal.PreviousGamepadButtonState
+				.GetValueOrDefault(gamepad, new Dictionary<int, bool>())
+				.GetValueOrDefault(button, false);
+			
+			return currentState && !previousState;
+		}
+
+		public static bool IsGamepadButtonDown(int gamepad, int button)
+		{
+			if (!IsGamepadAvailable(gamepad)) return false;
+			
+			// Check if button is currently being held down
+			return RaylibInternal.CurrentGamepadButtonState
+				.GetValueOrDefault(gamepad, new Dictionary<int, bool>())
+				.GetValueOrDefault(button, false);
+		}
+
+		public static bool IsGamepadButtonReleased(int gamepad, int button)
+		{
+			if (!IsGamepadAvailable(gamepad)) return false;
+			
+			// Check if button was just released (not down now, but was down in previous frame)
+			bool currentState = RaylibInternal.CurrentGamepadButtonState
+				.GetValueOrDefault(gamepad, new Dictionary<int, bool>())
+				.GetValueOrDefault(button, false);
+			bool previousState = RaylibInternal.PreviousGamepadButtonState
+				.GetValueOrDefault(gamepad, new Dictionary<int, bool>())
+				.GetValueOrDefault(button, false);
+			
+			return !currentState && previousState;
+		}
+
+		public static bool IsGamepadButtonUp(int gamepad, int button)
+		{
+			if (!IsGamepadAvailable(gamepad)) return false;
+			
+			// Check if button is NOT being pressed
+			return !RaylibInternal.CurrentGamepadButtonState
+				.GetValueOrDefault(gamepad, new Dictionary<int, bool>())
+				.GetValueOrDefault(button, false);
+		}
+
+		public static int GetGamepadButtonPressed()
+		{
+			// Get the last gamepad button pressed, return -1 if none
+			int lastPressed = RaylibInternal.LastGamepadButtonPressed;
+			RaylibInternal.LastGamepadButtonPressed = -1; // Reset after reading
+			return lastPressed;
+		}
+
+		public static int GetGamepadAxisCount(int gamepad)
+		{
+			if (!IsGamepadAvailable(gamepad)) return 0;
+			
+			// Most standard gamepads have 6 axes (2 sticks + 2 triggers)
+			// Left stick: X, Y
+			// Right stick: X, Y  
+			// Triggers: Left, Right
+			return 6;
+		}
+
+		public static float GetGamepadAxisMovement(int gamepad, int axis)
+		{
+			if (!IsGamepadAvailable(gamepad)) return 0.0f;
+			
+			var gamepadDevice = RaylibInternal.Input.Gamepads[gamepad];
+			
+			try
+			{
+				// Map axis indices to Silk.NET gamepad axes
+				return axis switch
+				{
+					0 => gamepadDevice.Thumbsticks[0].X,      // Left stick X
+					1 => gamepadDevice.Thumbsticks[0].Y,      // Left stick Y
+					2 => gamepadDevice.Thumbsticks[1].X,      // Right stick X  
+					3 => gamepadDevice.Thumbsticks[1].Y,      // Right stick Y
+					4 => gamepadDevice.Triggers[0].Position,  // Left trigger
+					5 => gamepadDevice.Triggers[1].Position,  // Right trigger
+					_ => 0.0f
+				};
+			}
+			catch
+			{
+				return 0.0f;
+			}
+		}
+
+		public static int SetGamepadMappings(string mappings)
+		{
+			// Silk.NET handles gamepad mappings internally
+			// This function exists for API compatibility
+			// Return 1 to indicate success (mappings are handled by Silk.NET)
+			return string.IsNullOrEmpty(mappings) ? 0 : 1;
+		}
+
+		public static void SetGamepadVibration(int gamepad, float leftMotor, float rightMotor, float duration)
+		{
+			if (!IsGamepadAvailable(gamepad)) return;
+			
+			try
+			{
+				var gamepadDevice = RaylibInternal.Input.Gamepads[gamepad];
+				
+				// Clamp values to valid range [0.0, 1.0]
+				leftMotor = Math.Clamp(leftMotor, 0.0f, 1.0f);
+				rightMotor = Math.Clamp(rightMotor, 0.0f, 1.0f);
+				
+				// Set vibration if the gamepad supports it
+				if (gamepadDevice.VibrationMotors.Count >= 2)
+				{
+					gamepadDevice.VibrationMotors[0].Speed = leftMotor;   // Left motor
+					gamepadDevice.VibrationMotors[1].Speed = rightMotor;  // Right motor
+				}
+				
+				// Note: Duration handling would require a timer system
+				// For now, vibration continues until manually stopped
+			}
+			catch
+			{
+				// Vibration not supported or failed
+			}
 		}
 
 		// File system functions
