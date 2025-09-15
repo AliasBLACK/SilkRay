@@ -138,9 +138,6 @@ namespace SilkRay
 		{
 			RaylibInternal.Window.DoEvents();
 			
-			// Update keyboard state for proper key press detection
-			UpdateKeyboardState();
-			
 			// Check for exit key press (Raylib behavior)
 			bool exitKeyPressed = IsKeyDown(RaylibInternal.ExitKey);
 			
@@ -1018,6 +1015,10 @@ namespace SilkRay
 			
 			// Present the frame by swapping buffers
 			RaylibInternal.Window?.SwapBuffers();
+			
+			// Update keyboard state for proper key press detection
+			// This must happen AFTER input processing but BEFORE the next frame
+			UpdateKeyboardState();
 		}
 
 		public static void ClearBackground(Color color)
