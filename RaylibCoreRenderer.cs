@@ -1,29 +1,30 @@
 using Silk.NET.OpenGL;
 using FontStashSharp;
+using System.Numerics;
 
 namespace SilkRay
 {
 	/// <summary>
 	/// OpenGL renderer for 2D graphics operations
 	/// </summary>
-	public unsafe class Renderer : IDisposable
+	public unsafe class Renderer(GL gl, int width, int height) : IDisposable
 	{
-		private readonly GL _gl;
+		private readonly GL _gl = gl ?? throw new ArgumentNullException(nameof(gl));
 		private Shader? _shader;
 		private Shader? _textureShader;
 		private uint _vao;
 		private uint _vbo;
 		private uint _textureVao;
 		private uint _textureVbo;
-		private Vector2 _screenSize;
+		private Vector2 _screenSize = new(width, height);
 		private bool _disposed;
 		private FontRenderer? _fontRenderer;
 
-		public Renderer(GL gl, int width, int height)
+		// Initialize the renderer when constructed
+		public void EnsureInitialized()
 		{
-			_gl = gl ?? throw new ArgumentNullException(nameof(gl));
-			_screenSize = new(width, height);
-			Initialize();
+			if (_shader == null)
+				Initialize();
 		}
 
 		private void Initialize()
@@ -148,12 +149,21 @@ namespace SilkRay
 				return;
 
 			// Define rectangle vertices
-			float[] vertices = {
-				x, y + height,          // Bottom-left
-				x, y,                   // Top-left
-				x + width, y + height,  // Bottom-right
-				x + width, y            // Top-right
+			Vector2[] originalVertices = {
+				new Vector2(x, y + height),          // Bottom-left
+				new Vector2(x, y),                   // Top-left
+				new Vector2(x + width, y + height),  // Bottom-right
+				new Vector2(x + width, y)            // Top-right
 			};
+
+			// Apply camera transformation if in 2D mode
+			float[] vertices = new float[8];
+			for (int i = 0; i < 4; i++)
+			{
+				Vector2 transformed = TransformVertex(originalVertices[i]);
+				vertices[i * 2] = transformed.X;
+				vertices[i * 2 + 1] = transformed.Y;
+			}
 
 			// Bind shader and set uniforms
 			_shader.Use();
@@ -234,9 +244,13 @@ namespace SilkRay
 			if (_disposed || _shader == null)
 				return;
 
+			// Apply camera transformation if in 2D mode
+			Vector2 start = TransformVertex(new Vector2(startX, startY));
+			Vector2 end = TransformVertex(new Vector2(endX, endY));
+
 			float[] vertices = {
-				startX, startY,
-				endX, endY
+				start.X, start.Y,
+				end.X, end.Y
 			};
 
 			// Bind shader and set uniforms
@@ -420,6 +434,35 @@ namespace SilkRay
 			{
 				Console.WriteLine($"Error in DrawText: {ex.Message}");
 			}
+		}
+
+		// Camera 2D support
+		private Matrix4x4? _currentCameraMatrix;
+		private bool _inMode2D = false;
+
+		public void BeginMode2D(Camera2D camera)
+		{
+			if (_disposed) return;
+			
+			_currentCameraMatrix = camera.GetMatrix();
+			_inMode2D = true;
+		}
+
+		public void EndMode2D()
+		{
+			if (_disposed) return;
+			
+			_currentCameraMatrix = null;
+			_inMode2D = false;
+		}
+
+		private Vector2 TransformVertex(Vector2 vertex)
+		{
+			if (!_inMode2D || !_currentCameraMatrix.HasValue)
+				return vertex;
+
+			var transform = Vector3.Transform(new Vector3(vertex.X, vertex.Y, 0), _currentCameraMatrix.Value);
+			return new Vector2(transform.X, transform.Y);
 		}
 
 		public void Resize(int width, int height)

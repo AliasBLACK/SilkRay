@@ -1354,6 +1354,26 @@ namespace SilkRay
 			return 60; // Placeholder
 		}
 
+		// Camera 2D functions
+		public static void BeginMode2D(Camera2D camera)
+		{
+			RaylibInternal.Renderer?.BeginMode2D(camera);
+		}
+
+		public static void EndMode2D()
+		{
+			RaylibInternal.Renderer?.EndMode2D();
+		}
+
+		public static Vector2 GetScreenToWorld2D(Vector2 position, Camera2D camera)
+		{
+			return camera.GetScreenToWorld2D(position);
+		}
+
+		public static Vector2 GetWorldToScreen2D(Vector2 position, Camera2D camera)
+		{
+			return camera.GetWorldToScreen2D(position);
+		}
 
 		// Event handlers
 		private static void OnLoad()
@@ -1362,6 +1382,7 @@ namespace SilkRay
 
 			RaylibInternal.GL = RaylibInternal.Window.CreateOpenGL();
 			RaylibInternal.Renderer = new(RaylibInternal.GL, RaylibInternal.Window.Size.X, RaylibInternal.Window.Size.Y);
+			RaylibInternal.Renderer.EnsureInitialized();
 			RaylibInternal.Input = RaylibInternal.Window.CreateInput();
 			
 			// Set up keyboard event handlers

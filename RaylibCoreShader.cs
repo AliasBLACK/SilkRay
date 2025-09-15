@@ -6,60 +6,61 @@ namespace SilkRay
 	/// <summary>
 	/// Shader program wrapper for OpenGL shaders
 	/// </summary>
-	public class Shader : IDisposable
+	public class Shader(GL gl, string vertexSource, string fragmentSource) : IDisposable
 	{
-		private readonly GL _gl;
-		private readonly uint _program;
+		private readonly GL _gl = gl ?? throw new ArgumentNullException(nameof(gl));
+		private readonly uint _program = CreateProgram(gl, vertexSource, fragmentSource);
 		private bool _disposed;
 
 		public uint Program => _program;
 
-		public Shader(GL gl, string vertexSource, string fragmentSource)
+		private static uint CreateProgram(GL gl, string vertexSource, string fragmentSource)
 		{
-			_gl = gl ?? throw new ArgumentNullException(nameof(gl));
-
 			// Compile vertex shader
-			uint vertexShader = CompileShader(ShaderType.VertexShader, vertexSource);
+			uint vertexShader = CompileShader(gl, ShaderType.VertexShader, vertexSource);
 			
 			// Compile fragment shader
-			uint fragmentShader = CompileShader(ShaderType.FragmentShader, fragmentSource);
+			uint fragmentShader = CompileShader(gl, ShaderType.FragmentShader, fragmentSource);
 
 			// Create and link program
-			_program = _gl.CreateProgram();
-			_gl.AttachShader(_program, vertexShader);
-			_gl.AttachShader(_program, fragmentShader);
-			_gl.LinkProgram(_program);
+			uint program = gl.CreateProgram();
+			gl.AttachShader(program, vertexShader);
+			gl.AttachShader(program, fragmentShader);
+			gl.LinkProgram(program);
 
 			// Check for linking errors
-			_gl.GetProgram(_program, GLEnum.LinkStatus, out int linkStatus);
+			gl.GetProgram(program, GLEnum.LinkStatus, out int linkStatus);
 			if (linkStatus == 0)
 			{
-				string infoLog = _gl.GetProgramInfoLog(_program);
+				string infoLog = gl.GetProgramInfoLog(program);
 				throw new InvalidOperationException($"Shader program linking failed: {infoLog}");
 			}
 
 			// Clean up individual shaders
-			_gl.DeleteShader(vertexShader);
-			_gl.DeleteShader(fragmentShader);
+			gl.DeleteShader(vertexShader);
+			gl.DeleteShader(fragmentShader);
+			
+			return program;
 		}
 
-		private uint CompileShader(ShaderType type, string source)
+		private static uint CompileShader(GL gl, ShaderType type, string source)
 		{
-			uint shader = _gl.CreateShader(type);
-			_gl.ShaderSource(shader, source);
-			_gl.CompileShader(shader);
+			uint shader = gl.CreateShader(type);
+			gl.ShaderSource(shader, source);
+			gl.CompileShader(shader);
 
 			// Check for compilation errors
-			_gl.GetShader(shader, ShaderParameterName.CompileStatus, out int compileStatus);
+			gl.GetShader(shader, ShaderParameterName.CompileStatus, out int compileStatus);
 			if (compileStatus == 0)
 			{
-				string infoLog = _gl.GetShaderInfoLog(shader);
-				_gl.DeleteShader(shader);
+				string infoLog = gl.GetShaderInfoLog(shader);
+				gl.DeleteShader(shader);
 				throw new InvalidOperationException($"Shader compilation failed ({type}): {infoLog}");
 			}
 
 			return shader;
 		}
+
 
 		public void Use()
 		{
