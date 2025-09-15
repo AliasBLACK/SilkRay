@@ -17,6 +17,9 @@ using TextCopy;
 using StbImageSharp;
 using FontStashSharp;
 using System.IO;
+using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace SilkRay
 {
@@ -1445,6 +1448,186 @@ namespace SilkRay
 			catch
 			{
 				return 0;
+			}
+		}
+
+		// Compression and encoding functions
+		public static byte[] CompressData(byte[] data, out int compDataSize)
+		{
+			if (data == null || data.Length == 0)
+			{
+				compDataSize = 0;
+				return Array.Empty<byte>();
+			}
+
+			try
+			{
+				using var memoryStream = new MemoryStream();
+				using (var deflateStream = new DeflateStream(memoryStream, CompressionMode.Compress))
+				{
+					deflateStream.Write(data, 0, data.Length);
+				}
+				
+				var compressed = memoryStream.ToArray();
+				compDataSize = compressed.Length;
+				return compressed;
+			}
+			catch
+			{
+				compDataSize = 0;
+				return Array.Empty<byte>();
+			}
+		}
+
+		public static byte[] DecompressData(byte[] compData, int compDataSize, out int dataSize)
+		{
+			if (compData == null || compDataSize <= 0)
+			{
+				dataSize = 0;
+				return Array.Empty<byte>();
+			}
+
+			try
+			{
+				using var compressedStream = new MemoryStream(compData, 0, compDataSize);
+				using var deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress);
+				using var resultStream = new MemoryStream();
+				
+				deflateStream.CopyTo(resultStream);
+				var decompressed = resultStream.ToArray();
+				dataSize = decompressed.Length;
+				return decompressed;
+			}
+			catch
+			{
+				dataSize = 0;
+				return Array.Empty<byte>();
+			}
+		}
+
+		public static string EncodeDataBase64(byte[] data, int dataSize, out int outputSize)
+		{
+			if (data == null || dataSize <= 0)
+			{
+				outputSize = 0;
+				return string.Empty;
+			}
+
+			try
+			{
+				// Use only the specified number of bytes
+				byte[] actualData = dataSize == data.Length ? data : data.Take(dataSize).ToArray();
+				string encoded = Convert.ToBase64String(actualData);
+				outputSize = encoded.Length;
+				return encoded;
+			}
+			catch
+			{
+				outputSize = 0;
+				return string.Empty;
+			}
+		}
+
+		public static byte[] DecodeDataBase64(string data, out int outputSize)
+		{
+			if (string.IsNullOrEmpty(data))
+			{
+				outputSize = 0;
+				return Array.Empty<byte>();
+			}
+
+			try
+			{
+				byte[] decoded = Convert.FromBase64String(data);
+				outputSize = decoded.Length;
+				return decoded;
+			}
+			catch
+			{
+				outputSize = 0;
+				return Array.Empty<byte>();
+			}
+		}
+
+		public static uint ComputeCRC32(byte[] data, int dataSize)
+		{
+			if (data == null || dataSize <= 0)
+				return 0;
+
+			// CRC32 implementation
+			uint crc = 0xFFFFFFFF;
+			
+			// CRC32 table (standard IEEE 802.3 polynomial)
+			uint[] crcTable = new uint[256];
+			for (uint i = 0; i < 256; i++)
+			{
+				uint c = i;
+				for (int j = 0; j < 8; j++)
+				{
+					if ((c & 1) != 0)
+						c = 0xEDB88320 ^ (c >> 1);
+					else
+						c >>= 1;
+				}
+				crcTable[i] = c;
+			}
+
+			// Calculate CRC32
+			for (int i = 0; i < Math.Min(dataSize, data.Length); i++)
+			{
+				crc = crcTable[(crc ^ data[i]) & 0xFF] ^ (crc >> 8);
+			}
+
+			return crc ^ 0xFFFFFFFF;
+		}
+
+		public static uint[] ComputeMD5(byte[] data, int dataSize)
+		{
+			if (data == null || dataSize <= 0)
+				return new uint[4];
+
+			try
+			{
+				using var md5 = MD5.Create();
+				byte[] actualData = dataSize == data.Length ? data : data.Take(dataSize).ToArray();
+				byte[] hash = md5.ComputeHash(actualData);
+				
+				// Convert to uint array (4 x 32-bit values = 16 bytes)
+				uint[] result = new uint[4];
+				for (int i = 0; i < 4; i++)
+				{
+					result[i] = BitConverter.ToUInt32(hash, i * 4);
+				}
+				return result;
+			}
+			catch
+			{
+				return new uint[4];
+			}
+		}
+
+		public static uint[] ComputeSHA1(byte[] data, int dataSize)
+		{
+			if (data == null || dataSize <= 0)
+				return new uint[5];
+
+			try
+			{
+				using var sha1 = SHA1.Create();
+				byte[] actualData = dataSize == data.Length ? data : data.Take(dataSize).ToArray();
+				byte[] hash = sha1.ComputeHash(actualData);
+				
+				// Convert to uint array (5 x 32-bit values = 20 bytes)
+				uint[] result = new uint[5];
+				for (int i = 0; i < 5; i++)
+				{
+					result[i] = BitConverter.ToUInt32(hash, i * 4);
+				}
+				return result;
+			}
+			catch
+			{
+				return new uint[5];
 			}
 		}
 	}
