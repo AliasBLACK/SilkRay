@@ -287,7 +287,7 @@ namespace SilkRay
 					byte* extensionsPtr = RaylibInternal.GL.GetString(StringName.Extensions);
 					if (extensionsPtr == null) return false;
 					
-					string extensions = System.Runtime.InteropServices.Marshal.PtrToStringAnsi((IntPtr)extensionsPtr);
+					string? extensions = System.Runtime.InteropServices.Marshal.PtrToStringAnsi((IntPtr)extensionsPtr);
 					return extensions != null && extensions.Contains("GL_EXT_texture_filter_anisotropic");
 				}
 			}
