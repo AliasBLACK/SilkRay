@@ -312,14 +312,35 @@ namespace SilkRay
 			float texRight = (source.X + source.Width) / texture.Width;
 			float texBottom = (source.Y + source.Height) / texture.Height;
 
-			// Define quad vertices with position and texture coordinates
-			float[] vertices = {
-				// Position (x, y), TexCoord (u, v)
-				dest.X, dest.Y + dest.Height, texLeft, texBottom,  // Bottom-left
-				dest.X, dest.Y, texLeft, texTop,                   // Top-left
-				dest.X + dest.Width, dest.Y + dest.Height, texRight, texBottom, // Bottom-right
-				dest.X + dest.Width, dest.Y, texRight, texTop      // Top-right
+			// Convert rotation from degrees to radians
+			float rotationRad = rotation * (float)(Math.PI / 180.0);
+			float cos = (float)Math.Cos(rotationRad);
+			float sin = (float)Math.Sin(rotationRad);
+
+			// Define quad vertices relative to origin (before rotation)
+			Vector2[] quadVertices = {
+				new Vector2(-origin.X, dest.Height - origin.Y),                    // Bottom-left
+				new Vector2(-origin.X, -origin.Y),                                 // Top-left
+				new Vector2(dest.Width - origin.X, dest.Height - origin.Y),       // Bottom-right
+				new Vector2(dest.Width - origin.X, -origin.Y)                     // Top-right
 			};
+
+			// Apply rotation and translation
+			float[] vertices = new float[16]; // 4 vertices * (2 pos + 2 tex) = 16 floats
+			float[] texCoords = { texLeft, texBottom, texLeft, texTop, texRight, texBottom, texRight, texTop };
+			
+			for (int i = 0; i < 4; i++)
+			{
+				// Rotate vertex around origin
+				float rotatedX = quadVertices[i].X * cos - quadVertices[i].Y * sin;
+				float rotatedY = quadVertices[i].X * sin + quadVertices[i].Y * cos;
+				
+				// Translate to final position
+				vertices[i * 4] = dest.X + origin.X + rotatedX;
+				vertices[i * 4 + 1] = dest.Y + origin.Y + rotatedY;
+				vertices[i * 4 + 2] = texCoords[i * 2];
+				vertices[i * 4 + 3] = texCoords[i * 2 + 1];
+			}
 
 			// Bind texture shader and set uniforms
 			_textureShader.Use();
