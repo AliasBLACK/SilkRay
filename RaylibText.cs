@@ -459,7 +459,7 @@ namespace SilkRay
 	/// <summary>
 	/// Text and Font functions implementation using Silk.NET and FontStashSharp
 	/// </summary>
-	public static class RaylibText
+	public static class Text
 	{
 		// Font system initialization
 		internal static void InitializeFontSystem()

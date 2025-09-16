@@ -4,9 +4,6 @@ using System.Numerics;
 
 namespace SilkRay
 {
-	/// <summary>
-	/// OpenGL renderer for 2D graphics operations
-	/// </summary>
 	public unsafe class Renderer(GL gl, int width, int height) : IDisposable
 	{
 		private readonly GL _gl = gl ?? throw new ArgumentNullException(nameof(gl));
@@ -150,10 +147,10 @@ namespace SilkRay
 
 			// Define rectangle vertices
 			Vector2[] originalVertices = {
-				new Vector2(x, y + height),          // Bottom-left
-				new Vector2(x, y),                   // Top-left
-				new Vector2(x + width, y + height),  // Bottom-right
-				new Vector2(x + width, y)            // Top-right
+				new(x, y + height),          // Bottom-left
+				new(x, y),                   // Top-left
+				new(x + width, y + height),  // Bottom-right
+				new(x + width, y)            // Top-right
 			};
 
 			// Apply camera transformation if in 2D mode
@@ -337,10 +334,10 @@ namespace SilkRay
 
 			// Define quad vertices relative to origin (before rotation)
 			Vector2[] quadVertices = {
-				new Vector2(-origin.X, dest.Height - origin.Y),                    // Bottom-left
-				new Vector2(-origin.X, -origin.Y),                                 // Top-left
-				new Vector2(dest.Width - origin.X, dest.Height - origin.Y),       // Bottom-right
-				new Vector2(dest.Width - origin.X, -origin.Y)                     // Top-right
+				new(-origin.X, dest.Height - origin.Y),				// Bottom-left
+				new(-origin.X, -origin.Y),							// Top-left
+				new(dest.Width - origin.X, dest.Height - origin.Y),	// Bottom-right
+				new(dest.Width - origin.X, -origin.Y)				// Top-right
 			};
 
 			// Apply rotation and translation

@@ -1,9 +1,8 @@
+using System.Numerics;
+
 namespace SilkRay
 {
-	/// <summary>
-	/// Shape drawing functions (rshapes)
-	/// </summary>
-	public static class RaylibShapes
+	public static class Shapes
 	{
 		// Shape drawing functions (rshapes)
 		public static void DrawPixel(int posX, int posY, Color color)

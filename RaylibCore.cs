@@ -1,15 +1,6 @@
-global using static SilkRay.RaylibCore;
-global using static SilkRay.RaylibShapes;
-global using static SilkRay.RaylibTextures;
-global using static SilkRay.RaylibText;
-global using static SilkRay.KeyboardKeys;
-global using static SilkRay.WindowFlags;
-global using static SilkRay.MouseButton;
-global using static SilkRay.MouseCursor;
-global using static SilkRay.TextureFilter;
-global using static SilkRay.TextureWrap;
-global using static SilkRay.GamepadButton;
-global using static SilkRay.GamepadAxis;
+global using static SilkRay.Core;
+global using static SilkRay.Textures;
+global using static SilkRay.Text;
 
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -19,7 +10,7 @@ using TextCopy;
 using FontStashSharp;
 using System.IO.Compression;
 using System.Security.Cryptography;
-using System.Text;
+using System.Numerics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -75,7 +66,7 @@ namespace SilkRay
 	/// Core Raylib functions implementation using Silk.NET
 	/// </summary>
 	[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "SilkRay is designed to work with NativeAOT")]
-	public static class RaylibCore
+	public static class Core
 	{
 		// Helper function to ensure GLFW is initialized
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1340,13 +1331,13 @@ namespace SilkRay
 		{
 			// Calculate FPS (simplified)
 			int fps = (int)(1.0f / GetFrameTime());
-			RaylibText.DrawText($"FPS: {fps}", posX, posY, 20, Color.Green);
+			DrawText($"FPS: {fps}", posX, posY, 20, GREEN);
 		}
 
 		public static bool CheckCollisionPointRec(Vector2 point, Rectangle rec)
 		{
 			return (point.X >= rec.X) && (point.X < (rec.X + rec.Width)) && 
-			       (point.Y >= rec.Y) && (point.Y < (rec.Y + rec.Height));
+				   (point.Y >= rec.Y) && (point.Y < (rec.Y + rec.Height));
 		}
 
 		public static int GetFPS()
@@ -1407,7 +1398,7 @@ namespace SilkRay
 			}
 			
 			// Initialize font system
-			RaylibText.InitializeFontSystem();
+			InitializeFontSystem();
 		}
 
 		private static void OnUpdate(double deltaTime)
@@ -1887,9 +1878,9 @@ namespace SilkRay
 					files.AddRange(Directory.GetDirectories(basePath, "*", searchOption));
 				}
 				
-				fileList.capacity = files.Count;
-				fileList.count = files.Count;
-				fileList.paths = files.ToArray();
+				fileList.Capacity = files.Count;
+				fileList.Count = files.Count;
+				fileList.Paths = files.ToArray();
 			}
 			catch
 			{
@@ -1914,9 +1905,9 @@ namespace SilkRay
 		{
 			var fileList = new FilePathList
 			{
-				capacity = RaylibInternal.DroppedFiles.Count,
-				count = RaylibInternal.DroppedFiles.Count,
-				paths = RaylibInternal.DroppedFiles.ToArray()
+				Capacity = RaylibInternal.DroppedFiles.Count,
+				Count = RaylibInternal.DroppedFiles.Count,
+				Paths = RaylibInternal.DroppedFiles.ToArray()
 			};
 			
 			return fileList;
@@ -2123,5 +2114,357 @@ namespace SilkRay
 				return new uint[5];
 			}
 		}
+
+		public struct Rectangle(float x, float y, float width, float height)
+		{
+			public float X = x;
+			public float Y = y;
+			public float Width = width;
+			public float Height = height;
+		}
+
+		public struct Image(byte[] data, int width, int height, int mipmaps = 1, int format = 1)
+		{
+			public byte[] Data = data;
+			public int Width = width;
+			public int Height = height;
+			public int Mipmaps = mipmaps;
+			public int Format = format;
+		}
+
+		public struct Texture2D(uint id, int width, int height, int mipmaps = 1, int format = 1)
+		{
+			public uint Id = id;				// OpenGL texture id
+			public int Width = width;			// Texture base width
+			public int Height = height;		// Texture base height
+			public int Mipmaps = mipmaps;		// Mipmap levels, 1 by default
+			public int Format = format;		// Data format (PixelFormat type)
+		}
+
+		public struct NPatchInfo(Rectangle source, int left, int top, int right, int bottom, int layout)
+		{
+			public Rectangle source = source;   // Texture source rectangle
+			public int left = left;             // Left border offset
+			public int top = top;               // Top border offset
+			public int right = right;           // Right border offset
+			public int bottom = bottom;         // Bottom border offset
+			public int layout = layout;         // Layout of the n-patch: 3x3, 1x3 or 3x1
+		}
+
+		public struct Font(string fileName, DynamicSpriteFont spriteFont, int baseSize = 18)
+		{
+			public string FileName = fileName;
+			public DynamicSpriteFont? SpriteFont = spriteFont;
+			public int BaseSize = baseSize;
+			public bool IsValid = spriteFont != null;
+		}
+
+		public struct FilePathList(int capacity = 0, int count = 0, string[]? paths = null)
+		{
+			public int Capacity = capacity;        		// Filepaths max entries
+			public int Count = count;           		// Filepaths entries count
+			public string[] Paths = paths ?? []; 		// Filepaths entries
+		}
+
+		public struct Camera2D(Vector2 offset = default, Vector2 target = default, float rotation = 0.0f, float zoom = 1.0f)
+		{
+			public Vector2 Offset = offset;
+			public Vector2 Target = target;
+			public float Rotation = rotation;
+			public float Zoom = zoom;
+
+			public readonly Matrix4x4 GetMatrix()
+			{
+				// Create transformation matrix for 2D camera
+				// Order: Translate to target -> Rotate -> Scale -> Translate by offset
+				
+				Matrix4x4 matTranslation = Matrix4x4.CreateTranslation(-Target.X, -Target.Y, 0.0f);
+				Matrix4x4 matRotation = Matrix4x4.CreateRotationZ(Rotation * (float)(Math.PI / 180.0f));
+				Matrix4x4 matScale = Matrix4x4.CreateScale(Zoom, Zoom, 1.0f);
+				Matrix4x4 matOffset = Matrix4x4.CreateTranslation(Offset.X, Offset.Y, 0.0f);
+
+				return matTranslation * matRotation * matScale * matOffset;
+			}
+
+			public readonly Matrix4x4 GetScreenToWorld()
+			{
+				Matrix4x4.Invert(GetMatrix(), out Matrix4x4 inverted);
+				return inverted;
+			}
+
+			public readonly Vector2 GetScreenToWorld2D(Vector2 position)
+			{
+				Matrix4x4 invMatCamera = GetScreenToWorld();
+				Vector3 transform = Vector3.Transform(new Vector3(position.X, position.Y, 0), invMatCamera);
+				return new Vector2(transform.X, transform.Y);
+			}
+
+			public readonly Vector2 GetWorldToScreen2D(Vector2 position)
+			{
+				Matrix4x4 matCamera = GetMatrix();
+				Vector3 transform = Vector3.Transform(new Vector3(position.X, position.Y, 0), matCamera);
+				return new Vector2(transform.X, transform.Y);
+			}
+		}
+
+		public struct Color(byte r, byte g, byte b, byte a = 255)
+		{
+			public byte R = r;
+			public byte G = g;
+			public byte B = b;
+			public byte A = a;
+
+			public Color(int r, int g, int b, int a = 255) : this(
+				(byte)Math.Clamp(r, 0, 255),
+				(byte)Math.Clamp(g, 0, 255),
+				(byte)Math.Clamp(b, 0, 255),
+				(byte)Math.Clamp(a, 0, 255))
+			{
+			}
+
+			public readonly Vector4 ToVector4()
+			{
+				return new Vector4(R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f);
+			}
+
+			public static Color FromVector4(Vector4 vector)
+			{
+				return new Color(
+					(byte)(vector.X * 255),
+					(byte)(vector.Y * 255),
+					(byte)(vector.Z * 255),
+					(byte)(vector.W * 255)
+				);
+			}
+
+			public override readonly string ToString()
+			{
+				return $"Color({R}, {G}, {B}, {A})";
+			}
+		}
+
+		public static readonly Color LIGHTGRAY = new(200, 200, 200);
+		public static readonly Color GRAY = new(130, 130, 130);
+		public static readonly Color DARKGRAY = new(80, 80, 80);
+		public static readonly Color YELLOW = new(253, 249, 0);
+		public static readonly Color GOLD = new(255, 203, 0);
+		public static readonly Color ORANGE = new(255, 161, 0);
+		public static readonly Color PINK = new(255, 109, 194);
+		public static readonly Color RED = new(230, 41, 55);
+		public static readonly Color MAROON = new(190, 33, 55);
+		public static readonly Color GREEN = new(0, 228, 48);
+		public static readonly Color LIME = new(0, 158, 47);
+		public static readonly Color DARKGREEN = new(0, 117, 44);
+		public static readonly Color SKYBLUE = new(102, 191, 255);
+		public static readonly Color BLUE = new(0, 121, 241);
+		public static readonly Color DARKBLUE = new(0, 82, 172);
+		public static readonly Color PURPLE = new(200, 122, 255);
+		public static readonly Color VIOLET = new(135, 60, 190);
+		public static readonly Color DARKPURPLE = new(112, 31, 126);
+		public static readonly Color BEIGE = new(211, 176, 131);
+		public static readonly Color BROWN = new(127, 106, 79);
+		public static readonly Color DARKBROWN = new(76, 63, 47);
+		public static readonly Color WHITE = new(255, 255, 255);
+		public static readonly Color BLACK = new(0, 0, 0);
+		public static readonly Color BLANK = new(0, 0, 0, 0);
+		public static readonly Color MAGENTA = new(255, 0, 255);
+		public static readonly Color RAYWHITE = new(245, 245, 245);
+
+		// ================================
+		// CONSTANTS AND ENUMS
+		// ================================
+
+		// Texture filtering modes
+		public const int TEXTURE_FILTER_POINT = 0;				// No filter; just pixel approximation
+		public const int TEXTURE_FILTER_BILINEAR = 1;			// Linear filtering
+		public const int TEXTURE_FILTER_TRILINEAR = 2;			// Trilinear filtering (linear with mipmaps)
+		public const int TEXTURE_FILTER_ANISOTROPIC_4X = 3;		// Anisotropic filtering 4x
+		public const int TEXTURE_FILTER_ANISOTROPIC_8X = 4;		// Anisotropic filtering 8x
+		public const int TEXTURE_FILTER_ANISOTROPIC_16X = 5;	// Anisotropic filtering 16x
+
+		// Texture wrap modes
+		public const int TEXTURE_WRAP_REPEAT = 0;				// Repeats texture in tiled mode
+		public const int TEXTURE_WRAP_CLAMP = 1;				// Clamps texture to edge pixel in tiled mode
+		public const int TEXTURE_WRAP_MIRROR_REPEAT = 2;		// Repeats texture with mirror in tiled mode
+		public const int TEXTURE_WRAP_MIRROR_CLAMP = 3;			// Clamps texture to edge pixel with mirror in tiled mode
+
+		// Mouse buttons
+		public const int MOUSE_BUTTON_LEFT = 0;					// Mouse button left
+		public const int MOUSE_BUTTON_RIGHT = 1;				// Mouse button right
+		public const int MOUSE_BUTTON_MIDDLE = 2;				// Mouse button middle (pressed wheel)
+		public const int MOUSE_BUTTON_SIDE = 3;					// Mouse button side (advanced mouse device)
+		public const int MOUSE_BUTTON_EXTRA = 4;				// Mouse button extra (advanced mouse device)
+		public const int MOUSE_BUTTON_FORWARD = 5;				// Mouse button forward (advanced mouse device)
+		public const int MOUSE_BUTTON_BACK = 6;					// Mouse button back (advanced mouse device)
+
+		// Mouse cursors
+		public const int MOUSE_CURSOR_DEFAULT = 0;				// Default pointer shape
+		public const int MOUSE_CURSOR_ARROW = 1;				// Arrow shape
+		public const int MOUSE_CURSOR_IBEAM = 2;				// Text writing cursor shape
+		public const int MOUSE_CURSOR_CROSSHAIR = 3;			// Cross shape
+		public const int MOUSE_CURSOR_POINTING_HAND = 4;		// Pointing hand cursor
+		public const int MOUSE_CURSOR_RESIZE_EW = 5;			// Horizontal resize/move arrow shape
+		public const int MOUSE_CURSOR_RESIZE_NS = 6;			// Vertical resize/move arrow shape
+		public const int MOUSE_CURSOR_RESIZE_NWSE = 7;			// Top-left to bottom-right diagonal resize/move arrow shape
+		public const int MOUSE_CURSOR_RESIZE_NESW = 8;			// The top-right to bottom-left diagonal resize/move arrow shape
+		public const int MOUSE_CURSOR_RESIZE_ALL = 9;			// The omnidirectional resize/move cursor shape
+		public const int MOUSE_CURSOR_NOT_ALLOWED = 10;			// The operation-not-allowed shape
+
+		// Alphanumeric keys
+		public const int KEY_SPACE = 32;						// Space
+		public const int KEY_APOSTROPHE = 39;					// '
+		public const int KEY_COMMA = 44;						// ,
+		public const int KEY_MINUS = 45;						// -
+		public const int KEY_PERIOD = 46;						// .
+		public const int KEY_SLASH = 47;						// /
+		public const int KEY_ZERO = 48;
+		public const int KEY_ONE = 49;
+		public const int KEY_TWO = 50;
+		public const int KEY_THREE = 51;
+		public const int KEY_FOUR = 52;
+		public const int KEY_FIVE = 53;
+		public const int KEY_SIX = 54;
+		public const int KEY_SEVEN = 55;
+		public const int KEY_EIGHT = 56;
+		public const int KEY_NINE = 57;
+		public const int KEY_SEMICOLON = 59;					// ;
+		public const int KEY_EQUAL = 61;						// =
+		public const int KEY_A = 65;
+		public const int KEY_B = 66;
+		public const int KEY_C = 67;
+		public const int KEY_D = 68;
+		public const int KEY_E = 69;
+		public const int KEY_F = 70;
+		public const int KEY_G = 71;
+		public const int KEY_H = 72;
+		public const int KEY_I = 73;
+		public const int KEY_J = 74;
+		public const int KEY_K = 75;
+		public const int KEY_L = 76;
+		public const int KEY_M = 77;
+		public const int KEY_N = 78;
+		public const int KEY_O = 79;
+		public const int KEY_P = 80;
+		public const int KEY_Q = 81;
+		public const int KEY_R = 82;
+		public const int KEY_S = 83;
+		public const int KEY_T = 84;
+		public const int KEY_U = 85;
+		public const int KEY_V = 86;
+		public const int KEY_W = 87;
+		public const int KEY_X = 88;
+		public const int KEY_Y = 89;
+		public const int KEY_Z = 90;
+		public const int KEY_LEFT_BRACKET = 91;				// [
+		public const int KEY_BACKSLASH = 92;					// \
+		public const int KEY_RIGHT_BRACKET = 93;				// ]
+		public const int KEY_GRAVE = 96;						// `
+
+		// Function keys
+		public const int KEY_ESCAPE = 256;
+		public const int KEY_ENTER = 257;
+		public const int KEY_TAB = 258;
+		public const int KEY_BACKSPACE = 259;
+		public const int KEY_INSERT = 260;
+		public const int KEY_DELETE = 261;
+		public const int KEY_RIGHT = 262;
+		public const int KEY_LEFT = 263;
+		public const int KEY_DOWN = 264;
+		public const int KEY_UP = 265;
+		public const int KEY_PAGE_UP = 266;
+		public const int KEY_PAGE_DOWN = 267;
+		public const int KEY_HOME = 268;
+		public const int KEY_END = 269;
+		public const int KEY_CAPS_LOCK = 280;
+		public const int KEY_SCROLL_LOCK = 281;
+		public const int KEY_NUM_LOCK = 282;
+		public const int KEY_PRINT_SCREEN = 283;
+		public const int KEY_PAUSE = 284;
+		public const int KEY_F1 = 290;
+		public const int KEY_F2 = 291;
+		public const int KEY_F3 = 292;
+		public const int KEY_F4 = 293;
+		public const int KEY_F5 = 294;
+		public const int KEY_F6 = 295;
+		public const int KEY_F7 = 296;
+		public const int KEY_F8 = 297;
+		public const int KEY_F9 = 298;
+		public const int KEY_F10 = 299;
+		public const int KEY_F11 = 300;
+		public const int KEY_F12 = 301;
+		public const int KEY_LEFT_SHIFT = 340;
+		public const int KEY_LEFT_CONTROL = 341;
+		public const int KEY_LEFT_ALT = 342;
+		public const int KEY_LEFT_SUPER = 343;
+		public const int KEY_RIGHT_SHIFT = 344;
+		public const int KEY_RIGHT_CONTROL = 345;
+		public const int KEY_RIGHT_ALT = 346;
+		public const int KEY_RIGHT_SUPER = 347;
+		public const int KEY_KB_MENU = 348;
+
+		// Keypad keys
+		public const int KEY_KP_0 = 320;
+		public const int KEY_KP_1 = 321;
+		public const int KEY_KP_2 = 322;
+		public const int KEY_KP_3 = 323;
+		public const int KEY_KP_4 = 324;
+		public const int KEY_KP_5 = 325;
+		public const int KEY_KP_6 = 326;
+		public const int KEY_KP_7 = 327;
+		public const int KEY_KP_8 = 328;
+		public const int KEY_KP_9 = 329;
+		public const int KEY_KP_DECIMAL = 330;
+		public const int KEY_KP_DIVIDE = 331;
+		public const int KEY_KP_MULTIPLY = 332;
+		public const int KEY_KP_SUBTRACT = 333;
+		public const int KEY_KP_ADD = 334;
+		public const int KEY_KP_ENTER = 335;
+		public const int KEY_KP_EQUAL = 336;
+
+		// Window flags
+		public const int FLAG_VSYNC_HINT = 0x00000040;           		// Set to try enabling V-Sync on GPU
+		public const int FLAG_FULLSCREEN_MODE = 0x00000002;      		// Set to run program in fullscreen
+		public const int FLAG_WINDOW_RESIZABLE = 0x00000004;     		// Set to allow resizable window
+		public const int FLAG_WINDOW_UNDECORATED = 0x00000008;   		// Set to disable window decoration (frame and buttons)
+		public const int FLAG_WINDOW_HIDDEN = 0x00000080;        		// Set to hide window
+		public const int FLAG_WINDOW_MINIMIZED = 0x00000200;     		// Set to minimize window (iconify)
+		public const int FLAG_WINDOW_MAXIMIZED = 0x00000400;     		// Set to maximize window (expanded to monitor)
+		public const int FLAG_WINDOW_UNFOCUSED = 0x00000800;     		// Set to window non focused
+		public const int FLAG_WINDOW_TOPMOST = 0x00001000;       		// Set to window always on top
+		public const int FLAG_WINDOW_ALWAYS_RUN = 0x00000100;    		// Set to allow windows running while minimized
+		public const int FLAG_WINDOW_TRANSPARENT = 0x00000010;   		// Set to allow transparent framebuffer
+		public const int FLAG_WINDOW_HIGHDPI = 0x00002000;       		// Set to support HighDPI
+		public const int FLAG_WINDOW_MOUSE_PASSTHROUGH = 0x00004000; 	// Set to support mouse passthrough, only supported when FLAG_WINDOW_UNDECORATED
+		public const int FLAG_BORDERLESS_WINDOWED_MODE = 0x00008000; 	// Set to run program in borderless windowed mode
+		public const int FLAG_MSAA_4X_HINT = 0x00000020;          	// Set to try enabling MSAA 4X
+		public const int FLAG_INTERLACED_HINT = 0x00010000;      		// Set to try enabling interlaced video format (for V3D)
+
+		// Gamepad button constants
+		public const int GAMEPAD_BUTTON_UNKNOWN = -1;				// Unknown button = ; just for error checking
+		public const int GAMEPAD_BUTTON_LEFT_FACE_UP = 11;		// Gamepad left DPAD up button
+		public const int GAMEPAD_BUTTON_LEFT_FACE_RIGHT = 12;		// Gamepad left DPAD right button
+		public const int GAMEPAD_BUTTON_LEFT_FACE_DOWN = 13;		// Gamepad left DPAD down button
+		public const int GAMEPAD_BUTTON_LEFT_FACE_LEFT = 14;		// Gamepad left DPAD left button
+		public const int GAMEPAD_BUTTON_RIGHT_FACE_UP = 3;		// Gamepad right button up (i.e. PS3: Triangle = ; Xbox: Y)
+		public const int GAMEPAD_BUTTON_RIGHT_FACE_RIGHT = 1;		// Gamepad right button right (i.e. PS3: Circle = ; Xbox: B)
+		public const int GAMEPAD_BUTTON_RIGHT_FACE_DOWN = 0;		// Gamepad right button down (i.e. PS3: Cross = ; Xbox: A)
+		public const int GAMEPAD_BUTTON_RIGHT_FACE_LEFT = 2;		// Gamepad right button left (i.e. PS3: Square = ; Xbox: X)
+		public const int GAMEPAD_BUTTON_LEFT_TRIGGER_1 = 4;		// Gamepad top/back trigger left (first) = ; it could be a trailing button
+		public const int GAMEPAD_BUTTON_LEFT_TRIGGER_2 = 15;		// Gamepad top/back trigger left (second) = ; it could be a trailing button
+		public const int GAMEPAD_BUTTON_RIGHT_TRIGGER_1 = 5;		// Gamepad top/back trigger right (first) = ; it could be a trailing button
+		public const int GAMEPAD_BUTTON_RIGHT_TRIGGER_2 = 16;		// Gamepad top/back trigger right (second) = ; it could be a trailing button
+		public const int GAMEPAD_BUTTON_MIDDLE_LEFT = 6;			// Gamepad center buttons = ; left one (i.e. PS3: Select)
+		public const int GAMEPAD_BUTTON_MIDDLE = 8;				// Gamepad center buttons = ; middle one (i.e. PS3: PS = ; Xbox: XBOX)
+		public const int GAMEPAD_BUTTON_MIDDLE_RIGHT = 7;			// Gamepad center buttons = ; right one (i.e. PS3: Start)
+		public const int GAMEPAD_BUTTON_LEFT_THUMB = 9;			// Gamepad joystick pressed button left
+		public const int GAMEPAD_BUTTON_RIGHT_THUMB = 10;			// Gamepad joystick pressed button right
+
+		// Gamepad axis constants
+		public const int GAMEPAD_AXIS_LEFT_X = 0;					// Left stick X axis
+		public const int GAMEPAD_AXIS_LEFT_Y = 1;					// Left stick Y axis
+		public const int GAMEPAD_AXIS_RIGHT_X = 2;				// Right stick X axis
+		public const int GAMEPAD_AXIS_RIGHT_Y = 3;				// Right stick Y axis
+		public const int GAMEPAD_AXIS_LEFT_TRIGGER = 4;			// Left trigger axis
+		public const int GAMEPAD_AXIS_RIGHT_TRIGGER = 5;			// Right trigger axis
 	}
 }

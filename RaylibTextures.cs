@@ -1,12 +1,13 @@
 using Silk.NET.OpenGL;
 using StbImageSharp;
+using System.Numerics;
 
 namespace SilkRay
 {
 	/// <summary>
 	/// Texture-related functions implementation using Silk.NET
 	/// </summary>
-	public static class RaylibTextures
+	public static class Textures
 	{
 		// Texture functions
 		public static Texture2D LoadTexture(string fileName)
