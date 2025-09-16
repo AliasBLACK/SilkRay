@@ -4,6 +4,8 @@ global using static SilkRay.Text;
 
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
+using Silk.NET.Windowing.Glfw;
+using Silk.NET.Input.Glfw;
 using Silk.NET.GLFW;
 using Silk.NET.Input;
 using TextCopy;
@@ -93,6 +95,10 @@ namespace SilkRay
 			{
 				CloseWindow();
 			}
+			
+			// Explicitly register GLFW windowing and input platforms for NativeAOT
+			GlfwWindowing.RegisterPlatform();
+			GlfwInput.RegisterPlatform();
 			
 			var options = WindowOptions.Default;
 			

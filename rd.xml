@@ -7,8 +7,10 @@
     <!-- Preserve Silk.NET types that may be used via reflection -->
     <Assembly Name="Silk.NET.OpenGL" Dynamic="Required All" />
     <Assembly Name="Silk.NET.Windowing" Dynamic="Required All" />
+    <Assembly Name="Silk.NET.Windowing.Glfw" Dynamic="Required All" />
     <Assembly Name="Silk.NET.GLFW" Dynamic="Required All" />
     <Assembly Name="Silk.NET.Input" Dynamic="Required All" />
+    <Assembly Name="Silk.NET.Input.Glfw" Dynamic="Required All" />
     
     <!-- Preserve FontStashSharp types -->
     <Assembly Name="FontStashSharp" Dynamic="Required All" />
