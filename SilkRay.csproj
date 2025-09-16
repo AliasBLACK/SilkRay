@@ -10,6 +10,26 @@
     <IsAotCompatible>true</IsAotCompatible>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <IsTrimmable>true</IsTrimmable>
+    
+    <!-- NuGet Package Metadata -->
+    <PackageId>SilkRay</PackageId>
+    <Version>2025.1.1</Version>
+    <Authors>AliasBLACK</Authors>
+    <Company>AliasBLACK</Company>
+    <Product>SilkRay</Product>
+    <Description>A Raylib-compatible API built on Silk.NET with full NativeAOT support. Provides cross-platform 2D graphics, input handling, and audio capabilities with zero-cost abstractions.</Description>
+    <PackageTags>raylib;silknet;graphics;gamedev;2d;opengl;nativeaot;crossplatform</PackageTags>
+    <PackageProjectUrl>https://github.com/AliasBLACK/SilkRay</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/AliasBLACK/SilkRay</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReleaseNotes>Updated release with README.md included in package</PackageReleaseNotes>
+    <Copyright>Copyright © 2024 AliasBLACK</Copyright>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +42,11 @@
     <PackageReference Include="Silk.NET.Input.Glfw" Version="2.22.0" />
     <PackageReference Include="TextCopy" Version="6.2.1" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
+  </ItemGroup>
+
+  <!-- Include README in NuGet package -->
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <!-- NativeAOT Root Descriptors (only included when publishing with AOT) -->
