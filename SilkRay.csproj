@@ -13,7 +13,7 @@
     
     <!-- NuGet Package Metadata -->
     <PackageId>SilkRay</PackageId>
-    <Version>2025.1.1</Version>
+    <Version>2025.1.2</Version>
     <Authors>AliasBLACK</Authors>
     <Company>AliasBLACK</Company>
     <Product>SilkRay</Product>
@@ -24,7 +24,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Updated release with README.md included in package</PackageReleaseNotes>
+    <PackageReleaseNotes>Updated README with correct Color naming convention (UPPERCASE) and comprehensive 2D feature documentation</PackageReleaseNotes>
     <Copyright>Copyright © 2024 AliasBLACK</Copyright>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
